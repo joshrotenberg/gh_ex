@@ -48,7 +48,7 @@ defmodule GH.GraphQL do
   A failed page raises `GH.Error`.
   """
 
-  alias GH.{Client, Error, RateLimit, Request}
+  alias GH.{Auth, Client, Error, RateLimit, Request}
 
   @type meta :: GH.GraphQL.Meta.t()
   @type result :: {:ok, term(), meta()} | {:error, Error.t() | Exception.t()}
@@ -60,10 +60,12 @@ defmodule GH.GraphQL do
   def query(client, query, variables \\ []) do
     body = %{query: query, variables: Map.new(variables)}
 
-    client
-    |> Request.build_graphql(body)
-    |> Req.request()
-    |> handle()
+    with {:ok, client} <- Auth.resolve(client) do
+      client
+      |> Request.build_graphql(body)
+      |> Req.request()
+      |> handle()
+    end
   end
 
   @doc """

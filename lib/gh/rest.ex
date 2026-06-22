@@ -23,7 +23,7 @@ defmodule GH.REST do
       GH.REST.post(client, "/repos/o/r/issues", json: %{title: "Bug", body: "..."})
   """
 
-  alias GH.{Client, Error, Pagination, RateLimit, Request}
+  alias GH.{Auth, Client, Error, Pagination, RateLimit, Request}
 
   @type meta :: GH.REST.Meta.t()
   @type result :: {:ok, term(), meta()} | {:error, Error.t() | Exception.t()}
@@ -90,10 +90,12 @@ defmodule GH.REST do
   defp emit({:error, reason}), do: raise(reason)
 
   defp request(client, method, path, opts) do
-    client
-    |> Request.build(method, path, opts)
-    |> Req.request()
-    |> handle()
+    with {:ok, client} <- Auth.resolve(client) do
+      client
+      |> Request.build(method, path, opts)
+      |> Req.request()
+      |> handle()
+    end
   end
 
   defp handle({:ok, %Req.Response{status: status} = resp}) when status in 200..299 do

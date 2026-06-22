@@ -52,7 +52,7 @@ defmodule GhEx.MixProject do
       extras: ["README.md", "CHANGELOG.md", "SPEC.md"],
       groups_for_modules: [
         Core: [GH, GH.Client, GH.REST, GH.GraphQL],
-        Authentication: [GH.Auth, GH.JWT, GH.App],
+        Authentication: [GH.Auth, GH.JWT, GH.App, GH.TokenCache, GH.TokenCache.ETS],
         "Pagination & metadata": [
           GH.Pagination,
           GH.RateLimit,

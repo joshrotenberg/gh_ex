@@ -18,6 +18,10 @@ follow semantic versioning once it reaches a release.
 - GitHub App auth: `GH.JWT.mint/3` (OTP-native RS256, no JOSE dependency) and
   `GH.App.installation_token/3` / `installation_client/3` for one-shot
   installation access tokens.
+- Transparent installation-token caching: `GH.App.installation/3` returns a
+  client that mints, caches, and refreshes its token through a `GH.TokenCache`.
+  `GH.TokenCache.ETS` is the default supervised cache (single-flight minting);
+  the behaviour lets you plug in a clustered backend.
 - Metadata and errors: `GH.REST.Meta`, `GH.GraphQL.Meta`, `GH.RateLimit`,
   `GH.Pagination`, and the normalized `GH.Error`.
 

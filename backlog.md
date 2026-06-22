@@ -63,12 +63,18 @@ PEM exposes an edge case. Built in two stages.
 - [ ] Smoke test against a real GitHub App PEM when one is handy (offline crypto
       tests already pass; this just confirms GitHub accepts the JWT)
 
-### M3b: transparent cache (to discuss before building)
-- [ ] `GH.TokenCache` behaviour with a default ETS-backed impl (~bring-your-own,
-      Nebulex/Redis pluggable), so installation tokens cache + refresh transparently
-- [ ] Decide: lazy resolve in the request path vs explicit refresh; the library's
-      first process; refresh slightly before expires_at
-- [ ] Optionally cache the app JWT (cheap to re-mint, low priority)
+### M3b: transparent cache (done)
+- [x] `GH.TokenCache` behaviour; default `GH.TokenCache.ETS` (supervised GenServer
+      owning a public ETS table, single-flight minting, refresh 60s before expiry)
+- [x] Effectful `GH.Auth.resolve/1` called by the REST and GraphQL request paths;
+      `{:installation, spec}` resolves to `{:token, t}` via the cache, minting on miss
+- [x] `GH.App.installation/3` builds a lazy installation client (no I/O at
+      construction); credential closes over the app for transparent re-mint
+- [x] Tests: cache hit/miss/expiry/independent-keys/error (no HTTP), plus an
+      integration test of transparent mint+cache+auth via Req.Test.allow (34 green)
+- Decisions landed: in-path I/O (yes), host-supervised cache (yes), single-flight
+  (yes, global across keys since mints are rare; shard by name if needed).
+- [ ] Optionally cache the app JWT (cheap to re-mint, low priority; deferred)
 
 ## M4: ongoing
 - [ ] Secondary-limit / abuse backoff (automatic)

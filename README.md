@@ -7,10 +7,10 @@ endpoint, today or later, and typed convenience modules are added by demand
 rather than as a coverage obligation. Auth and pagination, the parts nobody wants
 to hand-roll, are first class. See `SPEC.md` for the full rationale.
 
-> Status: prototype. M1 (REST core), M2 (GraphQL core), and M3a (GitHub App JWT
-> plus one-shot installation tokens) are implemented and tested. Transparent
-> installation-token caching (M3b) is in progress. The public `GH` namespace is
-> provisional and may become `GhEx` before the first release.
+> Status: prototype. M1 (REST core), M2 (GraphQL core), and M3 (GitHub App auth:
+> JWT, one-shot installation tokens, and transparent installation-token caching)
+> are implemented and tested. The public `GH` namespace is provisional and may
+> become `GhEx` before the first release.
 
 ## Installation
 
@@ -104,19 +104,36 @@ GH.new(auth: {:token, token})
 app = GH.new(auth: {:app, client_id_or_app_id, File.read!("app-private-key.pem")})
 ```
 
-To act as an installation, mint an installation access token (valid one hour):
+To act as an installation, get a client that mints and caches the installation
+access token (valid one hour) transparently, refreshing it before it expires.
+This needs a running token cache; add the default ETS cache to your supervision
+tree:
+
+```elixir
+children = [
+  GH.TokenCache.ETS
+  # ...
+]
+```
+
+```elixir
+inst = GH.App.installation(app, installation_id, cache: GH.TokenCache.ETS)
+GH.REST.get(inst, "/installation/repositories")
+```
+
+The cache is a behaviour: back it with your own module (Nebulex, Redis, ...) to
+share tokens across a cluster, without `gh_ex` depending on any cache library.
+
+If you would rather own the token lifecycle yourself, the stateless primitives
+mint a single token and hand it back:
 
 ```elixir
 # a token-auth client scoped to the installation, plus its expiry
 {:ok, inst, _expires_at} = GH.App.installation_client(app, installation_id)
-GH.REST.get(inst, "/installation/repositories")
 
 # or the raw token body, optionally scoped to repositories/permissions
 {:ok, body} = GH.App.installation_token(app, installation_id, json: %{repositories: ["gh_ex"]})
 ```
-
-Today the caller owns the one-hour token lifecycle. Transparent caching and
-refresh behind a `GH.TokenCache` behaviour is the M3b work in progress.
 
 ## GitHub Enterprise Server
 

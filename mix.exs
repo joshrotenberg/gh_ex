@@ -47,9 +47,20 @@ defmodule GhEx.MixProject do
 
   defp docs do
     [
-      main: "GH",
+      main: "readme",
       source_ref: "v#{@version}",
-      extras: ["README.md"]
+      extras: ["README.md", "CHANGELOG.md", "SPEC.md"],
+      groups_for_modules: [
+        Core: [GH, GH.Client, GH.REST, GH.GraphQL],
+        Authentication: [GH.Auth, GH.JWT, GH.App],
+        "Pagination & metadata": [
+          GH.Pagination,
+          GH.RateLimit,
+          GH.Error,
+          GH.REST.Meta,
+          GH.GraphQL.Meta
+        ]
+      ]
     ]
   end
 end

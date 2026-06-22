@@ -30,7 +30,7 @@ defmodule GH do
 
   ## Options
 
-    * `:auth` - a `GH.Auth.t/0` value, e.g. `{:token, "ghp_..."}`. Defaults to `nil`.
+    * `:auth` - a `t:GH.Auth.t/0` value, e.g. `{:token, "ghp_..."}`. Defaults to `nil`.
     * `:rest_url` - REST base URL. Defaults to `"https://api.github.com"`.
     * `:graphql_url` - GraphQL endpoint. Defaults to `"https://api.github.com/graphql"`.
     * `:req_options` - extra options merged into every `Req` request. Useful for

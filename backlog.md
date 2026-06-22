@@ -16,8 +16,14 @@ questions at the bottom.
 - [x] `GH.RateLimit` header snapshot in `meta`
 - [x] `Req.Test` harness + first doctests (13 tests, 4 doctests, green)
 
-## M1 loose ends (quick wins before or alongside M2)
-- [ ] README that teaches the core first (currently the `mix new` stub)
+## Documentation (kept current as we build)
+- [x] README teaching the core first (REST, GraphQL, auth, GHES, testing)
+- [x] CHANGELOG (Keep a Changelog format, Unreleased section)
+- [x] ex_doc organized: `main: readme`, extras, `groups_for_modules`; `mix docs` warning-free
+- Discipline: update README auth section + CHANGELOG + add an Authentication guide
+  as M3b lands; keep module docs written inline with the code.
+
+## M1 loose end
 - [ ] CI: GitHub Actions running `mix format --check-formatted` and `mix test`
       (consider `credo` and `dialyzer` as optional gates)
 

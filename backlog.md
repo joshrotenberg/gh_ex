@@ -39,11 +39,30 @@ questions at the bottom.
 - [ ] After M2: run the SPEC go/no-go gate honestly before building M3
 
 ## M3: App auth (the credibility feature)
-- [ ] Choose RS256 signer dependency (`jose` or equivalent); check via hexpm MCP
-- [ ] `GH.Auth` `{:app, app_id, pem}`: mint short-lived JWT
-- [ ] Installation token mint + cache with expiry + refresh
-- [ ] `GH.App.installation_client/2` resolving to the same bearer shape at request time
-- [ ] Tests for JWT claims, cache hit/expiry/refresh
+
+Decision: OTP-native RS256 signing, no JOSE dependency (one well-understood
+algorithm via `:public_key`/`:crypto`). `jose` stays an escape hatch if a real
+PEM exposes an edge case. Built in two stages.
+
+### M3a: stateless primitive (done)
+- [x] `GH.JWT.mint/3`: OTP-native RS256 GitHub App JWT (iss/iat/exp, clock-skew
+      backdating, sub-600s lifetime). Verified against real OTP crypto in tests.
+- [x] `GH.Auth` `{:app, issuer, pem}` resolves to a fresh bearer JWT per request
+- [x] `GH.App.installation_token/3` mints an installation token, returns the full
+      body (token, expires_at, permissions, repository_selection); `:json` scopes it
+- [x] `GH.App.installation_client/3` returns a token-auth client + expires_at,
+      inheriting the app client's URLs and req_options
+- [x] Tests: JWT claims + signature verify, numeric issuer, skew/lifetime,
+      req_auth app path, token mint (success/scoped/error), client mint (28 green)
+- [ ] Smoke test against a real GitHub App PEM when one is handy (offline crypto
+      tests already pass; this just confirms GitHub accepts the JWT)
+
+### M3b: transparent cache (to discuss before building)
+- [ ] `GH.TokenCache` behaviour with a default ETS-backed impl (~bring-your-own,
+      Nebulex/Redis pluggable), so installation tokens cache + refresh transparently
+- [ ] Decide: lazy resolve in the request path vs explicit refresh; the library's
+      first process; refresh slightly before expires_at
+- [ ] Optionally cache the app JWT (cheap to re-mint, low priority)
 
 ## M4: ongoing
 - [ ] Secondary-limit / abuse backoff (automatic)

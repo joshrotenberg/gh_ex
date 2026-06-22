@@ -33,6 +33,27 @@ defmodule GH.Request do
     |> Req.merge(opts)
   end
 
+  @doc """
+  Builds a `POST` to the client's GraphQL endpoint with `body` JSON-encoded.
+
+  `body` is the GraphQL envelope, typically `%{query: ..., variables: ...}`.
+  Shares the same headers and bearer auth as `build/4`; client `:req_options`
+  and per-call `opts` are merged last so a `Req.Test` plug can be installed.
+  """
+  @spec build_graphql(Client.t(), map(), keyword()) :: Req.Request.t()
+  def build_graphql(%Client{} = client, body, opts \\ []) do
+    [
+      method: :post,
+      url: client.graphql_url,
+      auth: Auth.req_auth(client.auth),
+      headers: base_headers(),
+      json: body
+    ]
+    |> Req.new()
+    |> Req.merge(client.req_options)
+    |> Req.merge(opts)
+  end
+
   defp base_headers do
     [
       {"accept", @accept},

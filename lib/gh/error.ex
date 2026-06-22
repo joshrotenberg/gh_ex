@@ -3,8 +3,9 @@ defmodule GH.Error do
   A normalized API error.
 
   Both transports collapse into this one shape. A REST call that returns a 4xx or
-  5xx becomes a `GH.Error` carrying the status and GitHub's error body. (GraphQL's
-  200-with-`errors` body will normalize into the same struct in M2.)
+  5xx becomes a `GH.Error` carrying the status and GitHub's error body. A GraphQL
+  call that returns a 200-with-`errors` body normalizes into the same struct via
+  `from_graphql/2`.
 
   It is also an exception, so streaming helpers that cannot return an `:error`
   tuple can `raise` it.
@@ -28,6 +29,25 @@ defmodule GH.Error do
       body: body,
       errors: extract(body, "errors"),
       documentation_url: extract(body, "documentation_url")
+    }
+  end
+
+  @doc """
+  Builds an error from a GraphQL 200-with-`errors` response.
+
+  GraphQL returns HTTP 200 even on failure, with the failures in an `errors`
+  array and any partial result in `data`. Both are preserved: `:errors` holds the
+  array, `:message` is the first error's message, and `:body` carries the whole
+  `%{"data" => ..., "errors" => ...}` envelope so partial data stays reachable.
+  """
+  @spec from_graphql(list(), term()) :: t()
+  def from_graphql(errors, data) when is_list(errors) do
+    %__MODULE__{
+      status: nil,
+      message: errors |> List.first(%{}) |> extract("message"),
+      body: %{"data" => data, "errors" => errors},
+      errors: errors,
+      documentation_url: nil
     }
   end
 

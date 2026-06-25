@@ -27,6 +27,7 @@ jobs:
           key: ${{ runner.os }}-lint-${{ hashFiles('**/mix.lock') }}
       - run: mix deps.get
       - run: mix format --check-formatted
+      - run: mix credo --strict
       - name: Verify the package assembles
         run: mix hex.build
 

@@ -12,7 +12,7 @@ The bet: the core is small and the value is high. The part most GitHub clients o
 
 ## Naming
 
-Package and repo: `gh_ex`. Open question for the sprint: public module namespace. Options are `GH` (short, ergonomic, slight collision risk in user code) or `GhEx` (unambiguous, slightly noisier). This spec uses `GH` in examples; decide for real at first release, not before.
+Package and repo: `gh_ex`. The public module namespace is `GhEx`, decided at release hardening: it matches the package name and avoids the collision risk of the shorter `GH`. Earlier drafts of this spec used `GH` in examples; the code and docs now use `GhEx`.
 
 ## Design principles
 
@@ -26,14 +26,14 @@ Package and repo: `gh_ex`. Open question for the sprint: public module namespace
 ## Architecture
 
 ```
-GH.Client        # struct: auth, rest_url, graphql_url, req_options
-GH.Auth          # {:token, t} | {:app, app_id, pem, ...} | {:installation, ...}; JWT mint, token cache
-GH.Request       # build and run via Req; inject Accept, X-GitHub-Api-Version, Authorization: Bearer
-GH.REST          # get/post/patch/put/delete -> {:ok, body, meta} | {:error, reason}
-GH.GraphQL       # query/mutation; variables; errors-array handling
-GH.Pagination    # REST Link-header stream and GraphQL cursor (pageInfo) stream, one API
-GH.RateLimit     # parse REST headers and GraphQL cost block; optional backoff
-GH.<Resource>    # OPTIONAL conveniences: Issues, PullRequests, Repos, Releases, ProjectsV2, ...
+GhEx.Client        # struct: auth, rest_url, graphql_url, req_options
+GhEx.Auth          # {:token, t} | {:app, app_id, pem, ...} | {:installation, ...}; JWT mint, token cache
+GhEx.Request       # build and run via Req; inject Accept, X-GitHub-Api-Version, Authorization: Bearer
+GhEx.REST          # get/post/patch/put/delete -> {:ok, body, meta} | {:error, reason}
+GhEx.GraphQL       # query/mutation; variables; errors-array handling
+GhEx.Pagination    # REST Link-header stream and GraphQL cursor (pageInfo) stream, one API
+GhEx.RateLimit     # parse REST headers and GraphQL cost block; optional backoff
+GhEx.<Resource>    # OPTIONAL conveniences: Issues, PullRequests, Repos, Releases, ProjectsV2, ...
 ```
 
 Everything above the optional resource modules is roughly 400 to 600 LOC. Resource modules are where line count grows, and the whole point is that you write only the ones you need.
@@ -41,27 +41,27 @@ Everything above the optional resource modules is roughly 400 to 600 LOC. Resour
 ## Target API shape
 
 ```elixir
-client = GH.new(auth: {:token, System.fetch_env!("GITHUB_TOKEN")})
+client = GhEx.new(auth: {:token, System.fetch_env!("GITHUB_TOKEN")})
 
 # generic REST, full coverage, auto-paginated
-GH.REST.get(client, "/repos/edgurgel/tentacat/issues", params: [state: "open"])
+GhEx.REST.get(client, "/repos/edgurgel/tentacat/issues", params: [state: "open"])
 
 # generic GraphQL, reaches Projects v2 and Discussions that REST cannot
-GH.GraphQL.query(client, @projects_v2_query, org: "joshrotenberg", number: 1)
+GhEx.GraphQL.query(client, @projects_v2_query, org: "joshrotenberg", number: 1)
 
 # optional convenience over the generic core
-GH.Issues.list(client, "edgurgel", "tentacat", state: "open")
+GhEx.Issues.list(client, "edgurgel", "tentacat", state: "open")
 
 # GitHub App: mint and cache an installation token transparently
-app = GH.new(auth: {:app, app_id, pem})
-inst = GH.App.installation_client(app, installation_id)
-GH.REST.get(inst, "/installation/repositories")
+app = GhEx.new(auth: {:app, app_id, pem})
+inst = GhEx.App.installation_client(app, installation_id)
+GhEx.REST.get(inst, "/installation/repositories")
 ```
 
 ## What "complete" means here
 
-- REST: every endpoint immediately, via `GH.REST.get(client, "/any/path", ...)` with auto-pagination. Conveniences for the top resources (issues, pulls, repos, releases, commits, contents, orgs, webhooks, search).
-- GraphQL: every query and mutation via `GH.GraphQL.query/3`, including Projects v2 and Discussions, which have no REST equivalent. Optional helpers for common Projects v2 operations.
+- REST: every endpoint immediately, via `GhEx.REST.get(client, "/any/path", ...)` with auto-pagination. Conveniences for the top resources (issues, pulls, repos, releases, commits, contents, orgs, webhooks, search).
+- GraphQL: every query and mutation via `GhEx.GraphQL.query/3`, including Projects v2 and Discussions, which have no REST equivalent. Optional helpers for common Projects v2 operations.
 - Auth: classic PAT, fine-grained PAT, OAuth token, and GitHub App (JWT signing, installation token mint, cache, refresh). GitHub Enterprise Server via base-url override.
 
 This is a more complete GitHub story than Tentacat has ever offered, in a fraction of the maintained surface, because completeness is delegated to the generic core rather than enumerated by hand.
@@ -98,7 +98,7 @@ Keep these out so the project does not spiral:
 
 ## Milestones
 
-- M1, one weekend: `GH.Client` plus `GH.Auth` (token), REST get and post, Link-header pagination, normalized errors, README. Usable.
+- M1, one weekend: `GhEx.Client` plus `GhEx.Auth` (token), REST get and post, Link-header pagination, normalized errors, README. Usable.
 - M2, one weekend: GraphQL core plus cursor pagination plus a working Projects v2 example. The unlock nothing else in the ecosystem gives you.
 - M3, one weekend: App auth (JWT plus installation token cache). The credibility feature.
 - M4, ongoing: rate-limit handling, `Req.Test` harness, doctests, hex release, a handful of convenience resources.
@@ -132,11 +132,11 @@ If two of the three are yes, it is a good side project. If the only yes is "it w
 ## First sprint checklist
 
 - [ ] `mix new gh_ex`, set up formatter, dialyzer optional, CI.
-- [ ] `GH.Client` struct and `GH.new/1`.
-- [ ] `GH.Auth` token path plus header injection.
-- [ ] `GH.REST.get/post` over Req with `{:ok, body, meta}`.
+- [ ] `GhEx.Client` struct and `GhEx.new/1`.
+- [ ] `GhEx.Auth` token path plus header injection.
+- [ ] `GhEx.REST.get/post` over Req with `{:ok, body, meta}`.
 - [ ] Link-header auto-pagination as a `Stream`.
-- [ ] `GH.GraphQL.query/3` with variables and errors handling.
+- [ ] `GhEx.GraphQL.query/3` with variables and errors handling.
 - [ ] Cursor pagination for GraphQL.
 - [ ] One real Projects v2 example, end to end, against a live token.
 - [ ] `Req.Test` harness and the first doctests.

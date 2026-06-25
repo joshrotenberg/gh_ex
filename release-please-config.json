@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "elixir",
+  "separate-pull-requests": false,
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "package-name": "gh_ex"
+    }
+  }
+}

@@ -14,6 +14,8 @@ defmodule GhEx.Auth do
   installation access token transparently, refreshing before it expires.
   """
 
+  alias GhEx.Auth.Installation
+
   @typedoc """
   A credential.
 
@@ -68,7 +70,7 @@ defmodule GhEx.Auth do
   """
   @spec resolve(GhEx.Client.t()) :: {:ok, GhEx.Client.t()} | {:error, term()}
   def resolve(%GhEx.Client{auth: {:installation, spec}} = client) do
-    case GhEx.Auth.Installation.token(spec) do
+    case Installation.token(spec) do
       {:ok, token} -> {:ok, %{client | auth: {:token, token}}}
       {:error, reason} -> {:error, reason}
     end

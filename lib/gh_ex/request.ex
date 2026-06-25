@@ -13,7 +13,6 @@ defmodule GhEx.Request do
 
   @accept "application/vnd.github+json"
   @api_version "2022-11-28"
-  @user_agent "gh_ex/#{Mix.Project.config()[:version]}"
 
   @doc """
   Builds a `Req.Request` for `method` against `path` (relative to the client's
@@ -58,7 +57,12 @@ defmodule GhEx.Request do
     [
       {"accept", @accept},
       {"x-github-api-version", @api_version},
-      {"user-agent", @user_agent}
+      {"user-agent", user_agent()}
     ]
+  end
+
+  defp user_agent do
+    version = Application.spec(:gh_ex, :vsn) || ~c"unknown"
+    "gh_ex/#{version}"
   end
 end

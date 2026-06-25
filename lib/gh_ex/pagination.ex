@@ -7,7 +7,7 @@ defmodule GhEx.Pagination do
   is the high-level consumer; use `links/1` directly when you want to drive
   pagination yourself.
 
-  GraphQL cursor pagination (`pageInfo`) shares this module in M2.
+  GraphQL cursor pagination is handled separately by `GhEx.GraphQL.stream/4`.
   """
 
   @link_re ~r/<(?<url>[^>]+)>\s*;\s*rel="(?<rel>[^"]+)"/

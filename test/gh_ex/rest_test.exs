@@ -11,6 +11,7 @@ defmodule GhEx.RESTTest do
         assert ["Bearer secret"] = Plug.Conn.get_req_header(conn, "authorization")
         assert ["2022-11-28"] = Plug.Conn.get_req_header(conn, "x-github-api-version")
         assert ["application/vnd.github+json"] = Plug.Conn.get_req_header(conn, "accept")
+        assert ["gh_ex/" <> _version] = Plug.Conn.get_req_header(conn, "user-agent")
         Req.Test.json(conn, %{"full_name" => "elixir-lang/elixir"})
       end)
 

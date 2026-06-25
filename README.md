@@ -1,5 +1,10 @@
 # gh_ex
 
+[![Hex.pm](https://img.shields.io/hexpm/v/gh_ex.svg)](https://hex.pm/packages/gh_ex)
+[![Hexdocs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/gh_ex)
+[![CI](https://github.com/joshrotenberg/gh_ex/actions/workflows/ci.yml/badge.svg)](https://github.com/joshrotenberg/gh_ex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/gh_ex.svg)](https://github.com/joshrotenberg/gh_ex/blob/main/LICENSE)
+
 A Req-based Elixir client for the GitHub REST and GraphQL APIs.
 
 A small generic core reaches every GitHub endpoint over both transports. Typed

@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 semantic versioning.
 
+## [0.2.1](https://github.com/joshrotenberg/gh_ex/compare/v0.2.0...v0.2.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* send a numeric App ID issuer as a JSON integer in the JWT ([#47](https://github.com/joshrotenberg/gh_ex/issues/47)) ([8874dd9](https://github.com/joshrotenberg/gh_ex/commit/8874dd927b8e2fa6f1ec40eb0bb7657443878a9c))
+
 ## [0.2.0](https://github.com/joshrotenberg/gh_ex/compare/v0.1.0...v0.2.0) (2026-06-25)
 
 

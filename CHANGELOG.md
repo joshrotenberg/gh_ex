@@ -24,5 +24,10 @@ follow semantic versioning once it reaches a release.
   the behaviour lets you plug in a clustered backend.
 - Metadata and errors: `GhEx.REST.Meta`, `GhEx.GraphQL.Meta`, `GhEx.RateLimit`,
   `GhEx.Pagination`, and the normalized `GhEx.Error`.
+- Convenience resources: `GhEx.Issues` and `GhEx.PullRequests`, thin wrappers over
+  `GhEx.REST` for the common Issues and Pull Requests paths.
+- Opt-in GitHub-aware rate-limit retry: `GhEx.RateLimit.retry/2`, a `Req`-compatible
+  policy that backs off on secondary rate limits (a `403` with `retry-after` or
+  `x-ratelimit-remaining: 0`).
 
 [Unreleased]: https://github.com/joshrotenberg/gh_ex

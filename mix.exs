@@ -41,7 +41,8 @@ defmodule GhEx.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      links: %{"GitHub" => @source_url}
+      links: %{"GitHub" => @source_url},
+      files: ~w(lib guides mix.exs .formatter.exs README.md CHANGELOG.md SPEC.md LICENSE)
     ]
   end
 

@@ -10,7 +10,7 @@ defmodule GhEx.JWTTest do
   end
 
   test "mints a verifiable RS256 JWT with GitHub App claims", %{pem: pem, public: public} do
-    jwt = GhEx.JWT.mint("Iv1.client", pem, now: 1_000_000)
+    assert {:ok, jwt} = GhEx.JWT.mint("Iv1.client", pem, now: 1_000_000)
     [h64, c64, s64] = String.split(jwt, ".")
 
     header = h64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
@@ -26,22 +26,37 @@ defmodule GhEx.JWTTest do
   end
 
   test "stringifies a numeric issuer", %{pem: pem} do
-    jwt = GhEx.JWT.mint(123_456, pem, now: 1_000_000)
+    assert {:ok, jwt} = GhEx.JWT.mint(123_456, pem, now: 1_000_000)
     [_h, c64, _s] = String.split(jwt, ".")
     claims = c64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
     assert claims["iss"] == "123456"
   end
 
   test "honors :skew and :lifetime", %{pem: pem} do
-    jwt = GhEx.JWT.mint("app", pem, now: 2_000_000, skew: 10, lifetime: 300)
+    assert {:ok, jwt} = GhEx.JWT.mint("app", pem, now: 2_000_000, skew: 10, lifetime: 300)
     [_h, c64, _s] = String.split(jwt, ".")
     claims = c64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
     assert claims["iat"] == 2_000_000 - 10
     assert claims["exp"] == claims["iat"] + 300
   end
 
-  test "GhEx.Auth.req_auth resolves an app credential to a bearer JWT", %{pem: pem} do
-    assert {:bearer, jwt} = GhEx.Auth.req_auth({:app, "app", pem})
+  test "rejects a :lifetime over GitHub's 600-second ceiling", %{pem: pem} do
+    assert {:error, {:invalid_lifetime, 700}} = GhEx.JWT.mint("app", pem, lifetime: 700)
+  end
+
+  test "returns {:error, :invalid_pem} on a malformed PEM" do
+    assert {:error, :invalid_pem} = GhEx.JWT.mint("app", "-----BEGIN nonsense-----")
+  end
+
+  test "GhEx.Auth.resolve mints an app credential into a token JWT", %{pem: pem} do
+    client = GhEx.new(auth: {:app, "app", pem})
+    assert {:ok, %GhEx.Client{auth: {:token, jwt}}} = GhEx.Auth.resolve(client)
     assert [_h, _c, _s] = String.split(jwt, ".")
+  end
+
+  test "a bad-PEM app client surfaces an error instead of crashing the request" do
+    client = GhEx.new(auth: {:app, "app", "not a pem"})
+    assert {:error, :invalid_pem} = GhEx.Auth.resolve(client)
+    assert {:error, :invalid_pem} = GhEx.REST.get(client, "/user")
   end
 end

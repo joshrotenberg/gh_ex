@@ -67,4 +67,23 @@ defmodule GhEx.Auth.InstallationTest do
 
     assert {:error, %GhEx.Error{status: 404}} = GhEx.REST.get(inst, "/installation/repositories")
   end
+
+  test "a malformed expires_at surfaces as an error instead of an infinite re-mint",
+       %{pem: pem, cache_pid: cache_pid, cache: cache} do
+    Req.Test.stub(__MODULE__.BadExp, fn conn ->
+      conn
+      |> Plug.Conn.put_status(201)
+      |> Req.Test.json(%{"token" => "ghs_inst", "expires_at" => "not-a-date"})
+    end)
+
+    Req.Test.allow(__MODULE__.BadExp, self(), cache_pid)
+
+    app =
+      GhEx.new(auth: {:app, "Iv1.app", pem}, req_options: [plug: {Req.Test, __MODULE__.BadExp}])
+
+    inst = GhEx.App.installation(app, 7, cache: cache)
+
+    assert {:error, {:invalid_expires_at, "not-a-date"}} =
+             GhEx.REST.get(inst, "/installation/repositories")
+  end
 end

@@ -84,4 +84,12 @@ defmodule GhEx.AppTest do
                GhEx.App.installation_client(app(__MODULE__.NoTok, pem), 42)
     end
   end
+
+  describe "installation/3" do
+    test "raises a clear ArgumentError when the required :cache option is missing", %{pem: pem} do
+      assert_raise ArgumentError, ~r/requires a :cache option/, fn ->
+        GhEx.App.installation(GhEx.new(auth: {:app, "Iv1.app", pem}), 42, [])
+      end
+    end
+  end
 end

@@ -30,6 +30,22 @@ defmodule GhEx.TokenCache.ETS do
 
   @refresh_skew 60
 
+  @doc """
+  Builds a supervisor child spec whose `:id` is the `:name`, so several named
+  caches can run under one supervisor without an id clash.
+  """
+  def child_spec(opts) do
+    name = Keyword.get(opts, :name, __MODULE__)
+
+    %{
+      id: name,
+      start: {__MODULE__, :start_link, [opts]},
+      type: :worker,
+      restart: :permanent,
+      shutdown: 5_000
+    }
+  end
+
   @doc "Starts the cache. `:name` defaults to `#{inspect(__MODULE__)}`."
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)

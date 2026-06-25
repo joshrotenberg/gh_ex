@@ -45,7 +45,16 @@ defmodule GhEx.App do
   """
   @spec installation(Client.t(), integer() | String.t(), keyword()) :: Client.t()
   def installation(%Client{} = app, installation_id, opts) do
-    cache = Keyword.fetch!(opts, :cache)
+    cache =
+      case Keyword.fetch(opts, :cache) do
+        {:ok, cache} ->
+          cache
+
+        :error ->
+          raise ArgumentError,
+                "GhEx.App.installation/3 requires a :cache option " <>
+                  "(a GhEx.TokenCache module or {module, ref} tuple)"
+      end
 
     spec = %{
       app: app,

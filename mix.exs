@@ -49,7 +49,20 @@ defmodule GhEx.MixProject do
     [
       main: "readme",
       source_ref: "v#{@version}",
-      extras: ["README.md", "CHANGELOG.md", "SPEC.md"],
+      extras: [
+        "README.md",
+        "guides/getting-started.md",
+        "guides/authentication.md",
+        "guides/pagination.md",
+        "guides/error-handling.md",
+        "guides/github-enterprise-server.md",
+        "guides/testing.md",
+        "CHANGELOG.md",
+        "SPEC.md"
+      ],
+      groups_for_extras: [
+        Guides: ~r"guides/"
+      ],
       groups_for_modules: [
         Core: [GhEx, GhEx.Client, GhEx.REST, GhEx.GraphQL],
         Resources: [GhEx.Issues, GhEx.PullRequests],

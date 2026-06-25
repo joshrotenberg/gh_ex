@@ -20,20 +20,16 @@ defmodule GhEx.Auth.Installation do
   defp mint(app, id, token_opts) do
     case GhEx.App.installation_token(app, id, token_opts) do
       {:ok, %{"token" => token, "expires_at" => expires_at}} ->
-        {:ok, %{token: token, expires_at: parse(expires_at)}}
+        case DateTime.from_iso8601(expires_at) do
+          {:ok, datetime, _offset} -> {:ok, %{token: token, expires_at: datetime}}
+          _ -> {:error, {:invalid_expires_at, expires_at}}
+        end
 
       {:ok, body} ->
         {:error, {:unexpected_response, body}}
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  defp parse(iso8601) do
-    case DateTime.from_iso8601(iso8601) do
-      {:ok, datetime, _offset} -> datetime
-      _ -> DateTime.utc_now()
     end
   end
 

@@ -53,4 +53,17 @@ defmodule GhEx.TokenCache.ETSTest do
     # a later successful mint still works (the error was not stored)
     assert {:ok, %{token: "ok"}} = ETS.fetch(cache, :k, fn -> {:ok, value("ok", 3600)} end)
   end
+
+  test "multiple named caches coexist under one supervisor" do
+    {:ok, sup} =
+      Supervisor.start_link(
+        [{ETS, name: __MODULE__.A}, {ETS, name: __MODULE__.B}],
+        strategy: :one_for_one
+      )
+
+    assert {:ok, %{token: "a"}} = ETS.fetch(__MODULE__.A, :k, fn -> {:ok, value("a", 3600)} end)
+    assert {:ok, %{token: "b"}} = ETS.fetch(__MODULE__.B, :k, fn -> {:ok, value("b", 3600)} end)
+
+    Supervisor.stop(sup)
+  end
 end

@@ -179,4 +179,35 @@ defmodule GhEx.RESTTest do
       assert {:error, %GhEx.Error{status: 403}} = GhEx.REST.get(client, "/x")
     end
   end
+
+  describe "raw/4" do
+    test "returns the raw response and does not treat a non-2xx as an error" do
+      Req.Test.stub(__MODULE__.Raw, fn conn ->
+        case conn.request_path do
+          "/ok" ->
+            Req.Test.json(conn, %{"ok" => true})
+
+          "/missing" ->
+            conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"message" => "Not Found"})
+        end
+      end)
+
+      c = client(__MODULE__.Raw)
+      assert {:ok, %Req.Response{status: 200}} = GhEx.REST.raw(c, :get, "/ok")
+      assert {:ok, %Req.Response{status: 404}} = GhEx.REST.raw(c, :get, "/missing")
+    end
+  end
+
+  describe "RateLimit.get/1" do
+    test "GETs /rate_limit" do
+      Req.Test.stub(__MODULE__.RLGet, fn conn ->
+        assert conn.request_path == "/rate_limit"
+
+        Req.Test.json(conn, %{"resources" => %{"core" => %{"limit" => 5000, "remaining" => 4999}}})
+      end)
+
+      assert {:ok, %{"resources" => %{"core" => %{"limit" => 5000}}}, _meta} =
+               GhEx.RateLimit.get(client(__MODULE__.RLGet))
+    end
+  end
 end

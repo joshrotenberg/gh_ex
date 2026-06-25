@@ -35,7 +35,7 @@ defmodule GhEx.MixProject do
   end
 
   defp description do
-    "A modern, Req-based Elixir client for the GitHub REST and GraphQL APIs."
+    "A Req-based Elixir client for the GitHub REST and GraphQL APIs."
   end
 
   defp package do

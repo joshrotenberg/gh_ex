@@ -1,8 +1,7 @@
 defmodule GhEx.REST do
   @moduledoc """
-  Generic REST access. This is the whole REST API, forever: any path GitHub
-  ships, today or tomorrow, is reachable through `get/3`, `post/3`, `patch/3`,
-  `put/3`, and `delete/3`.
+  Generic REST access. Any GitHub REST path is reachable through `get/3`,
+  `post/3`, `patch/3`, `put/3`, and `delete/3`.
 
   Every call returns `{:ok, body, meta}` on a 2xx or `{:error, reason}` otherwise,
   where `reason` is a `GhEx.Error` for an API error response or a `Req` exception for

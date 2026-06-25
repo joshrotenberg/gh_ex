@@ -1,11 +1,10 @@
 # gh_ex
 
-A modern, Req-based Elixir client for the GitHub REST and GraphQL APIs.
+A Req-based Elixir client for the GitHub REST and GraphQL APIs.
 
-The design is *core over catalog*: a small generic core reaches every GitHub
-endpoint, today or later, and typed convenience modules are added by demand
-rather than as a coverage obligation. Auth and pagination, the parts nobody wants
-to hand-roll, are first class. See `SPEC.md` for the full rationale.
+A small generic core reaches every GitHub endpoint. Typed convenience modules
+are added as needed rather than for full endpoint coverage. Auth and pagination
+are handled by the core. See `SPEC.md` for the design rationale.
 
 > Status: pre-release (0.1). M1 (REST core), M2 (GraphQL core), and M3 (GitHub
 > App auth: JWT, one-shot installation tokens, and transparent installation-token

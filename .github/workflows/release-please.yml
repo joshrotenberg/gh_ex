@@ -1,8 +1,11 @@
-name: Release Please
+name: Release
 
-# Maintains a release PR that bumps the mix.exs version and CHANGELOG from
-# conventional commits. Merging it creates the git tag and GitHub Release, then
-# the publish job ships the package and docs to Hex.
+# Release Please maintains the version/CHANGELOG release PR. Publishing is
+# decoupled from it: whenever main's mix.exs version has no matching git tag
+# (i.e. a release PR was merged), the publish job tags it, creates the GitHub
+# Release, publishes the package and docs to Hex, and marks the release PR
+# tagged. This avoids Release Please's release-creation step, which has proven
+# unreliable here. workflow_dispatch re-runs the check as a manual break-glass.
 #
 # Requires a HEX_API_KEY repository secret.
 
@@ -18,34 +21,69 @@ permissions:
 
 jobs:
   release-please:
-    name: Release PR / GitHub Release
+    name: Maintain the release PR
     runs-on: ubuntu-latest
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
     steps:
       - uses: googleapis/release-please-action@v4
-        id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
   publish:
-    name: Publish to Hex
+    name: Tag, release, and publish
     needs: release-please
-    # Publishes when Release Please cuts a release, or manually via "Run workflow"
-    # (workflow_dispatch) as a break-glass for recovering a release.
-    if: ${{ github.event_name == 'workflow_dispatch' || needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Does mix.exs's version need releasing?
+        id: v
+        run: |
+          version=$(grep -m1 '@version' mix.exs | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "v$version is already released; nothing to do."
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "v$version is not released yet; will tag and publish."
+          fi
+
       - uses: erlef/setup-beam@v1
+        if: steps.v.outputs.needed == 'true'
         with:
           elixir-version: "1.18"
           otp-version: "27"
-      - run: mix deps.get
-      - run: mix compile --warnings-as-errors
-      - run: mix test
-      - run: mix hex.publish --yes
+
+      - name: Tag, release, and publish
+        if: steps.v.outputs.needed == 'true'
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.v.outputs.version }}"
+
+          mix deps.get
+          mix compile --warnings-as-errors
+          mix test
+
+          git tag "v$version"
+          git push origin "v$version"
+
+          notes=$(awk -v v="$version" 'BEGIN{f=0} $0 ~ "^## \\[" v "\\]" {f=1; print; next} /^## \[/ {if (f) exit} f {print}' CHANGELOG.md)
+          [ -n "$notes" ] || notes="See CHANGELOG.md for v$version."
+          printf '%s\n' "$notes" | gh release create "v$version" --title "v$version" --notes-file -
+
+          mix hex.publish --yes
+
+          # Keep Release Please's state consistent (it no longer tags releases itself).
+          pr=$(gh pr list --state merged --label "autorelease: pending" --json number --jq '.[0].number // empty')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --remove-label "autorelease: pending" --add-label "autorelease: tagged"
+          fi

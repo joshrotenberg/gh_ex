@@ -52,6 +52,7 @@ defmodule GhEx.MixProject do
       extras: ["README.md", "CHANGELOG.md", "SPEC.md"],
       groups_for_modules: [
         Core: [GhEx, GhEx.Client, GhEx.REST, GhEx.GraphQL],
+        Resources: [GhEx.Issues, GhEx.PullRequests],
         Authentication: [GhEx.Auth, GhEx.JWT, GhEx.App, GhEx.TokenCache, GhEx.TokenCache.ETS],
         "Pagination & metadata": [
           GhEx.Pagination,

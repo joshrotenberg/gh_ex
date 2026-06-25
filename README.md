@@ -2,9 +2,24 @@
 
 A Req-based Elixir client for the GitHub REST and GraphQL APIs.
 
-A small generic core reaches every GitHub endpoint. Typed convenience modules
-are added as needed rather than for full endpoint coverage. Auth and pagination
-are handled by the core. See `SPEC.md` for the design rationale.
+A small generic core reaches every GitHub endpoint over both transports. Typed
+convenience modules are added as needed rather than for full endpoint coverage.
+See `SPEC.md` for the design rationale.
+
+## Highlights
+
+- **REST and GraphQL.** `GhEx.REST.get/post/patch/put/delete` reach any REST
+  path; `GhEx.GraphQL.query/3` reaches queries and mutations REST has no
+  equivalent for, including Projects v2 and Discussions.
+- **GitHub App authentication.** Authenticate as an App with an OTP-native RS256
+  JWT (no JOSE dependency), and as an installation with an access token that is
+  minted, cached, and refreshed transparently.
+- **Built on Req.** Test with `Req.Test` and no HTTP mocking; errors normalize to
+  `GhEx.Error`; `meta` carries a rate-limit snapshot and parsed pagination links;
+  both transports paginate as a lazy `Stream`.
+- **Generic core, convenience by demand.** Every endpoint is reachable through
+  the core. Typed modules such as `GhEx.Issues` and `GhEx.PullRequests` wrap the
+  common paths and are added as they are needed.
 
 > Status: pre-release (0.1). M1 (REST core), M2 (GraphQL core), and M3 (GitHub
 > App auth: JWT, one-shot installation tokens, and transparent installation-token
@@ -30,7 +45,7 @@ client = GhEx.new(auth: {:token, System.fetch_env!("GITHUB_TOKEN")})
 
 ### REST
 
-`get/post/patch/put/delete` reach any path GitHub ships. Every call returns
+`get/post/patch/put/delete` reach any REST path. Every call returns
 `{:ok, body, meta}` on a 2xx or `{:error, reason}` otherwise, where `meta`
 carries the status, headers, parsed pagination links, and a rate-limit snapshot.
 
@@ -54,8 +69,8 @@ client
 
 ### GraphQL
 
-`query/3` runs any query or mutation, including the corners REST cannot reach
-such as Projects v2 and Discussions. Variables are a keyword list or map.
+`query/3` runs any query or mutation, including operations REST has no equivalent
+for, such as Projects v2 and Discussions. Variables are a keyword list or map.
 
 ```elixir
 {:ok, data, _meta} =
@@ -68,7 +83,7 @@ array becomes `{:error, %GhEx.Error{}}` (the same error struct REST uses); any
 partial `data` is preserved on the error.
 
 `stream/4` walks a connection's `pageInfo` cursor into a lazy `Stream`, mirroring
-the REST streamer. The query accepts a cursor variable wired into `after:` and
+the REST streamer. The query takes a cursor variable wired into `after:` and
 selects `pageInfo { hasNextPage endCursor }`; you tell `stream/4` where the
 connection lives with `:path`:
 
@@ -87,6 +102,16 @@ client
   path: ["organization", "projectsV2"]
 )
 |> Enum.to_list()
+```
+
+### Convenience modules
+
+`GhEx.Issues` and `GhEx.PullRequests` wrap the common paths and return the same
+shape as the core:
+
+```elixir
+GhEx.Issues.list(client, "elixir-lang", "elixir", params: [state: "open"])
+GhEx.PullRequests.create(client, "o", "r", %{title: "Fix", head: "fix", base: "main"})
 ```
 
 ## Authentication
@@ -133,6 +158,8 @@ mint a single token and hand it back:
 {:ok, body} = GhEx.App.installation_token(app, installation_id, json: %{repositories: ["gh_ex"]})
 ```
 
+See the [Authentication guide](guides/authentication.md) for the full flow.
+
 ## GitHub Enterprise Server
 
 Override the base URLs:
@@ -154,11 +181,16 @@ The client is Req-native, so `Req.Test` drives it. Install a plug through
 client = GhEx.new(req_options: [plug: {Req.Test, MyStub}])
 ```
 
+See the [Testing guide](guides/testing.md) for asserting requests and stubbing
+App and installation auth.
+
 ## Documentation
 
-```
-mix docs
-```
+Run `mix docs`, or start with the [getting-started guide](guides/getting-started.md).
+Guides cover [authentication](guides/authentication.md),
+[pagination](guides/pagination.md), [error handling](guides/error-handling.md),
+[GitHub Enterprise Server](guides/github-enterprise-server.md), and
+[testing](guides/testing.md).
 
 ## License
 

@@ -1,10 +1,10 @@
 defmodule GhEx do
   @moduledoc """
-  A modern, Req-based client for the GitHub REST and GraphQL APIs.
+  A Req-based client for the GitHub REST and GraphQL APIs.
 
-  The design is *core over catalog*: a small generic core reaches every GitHub
-  endpoint, and typed convenience modules are added by demand rather than as a
-  coverage obligation. See `SPEC.md` for the full rationale.
+  A small generic core (`GhEx.REST` and `GhEx.GraphQL`) reaches every GitHub
+  endpoint. Typed convenience modules are added as needed rather than for full
+  endpoint coverage. See `SPEC.md` for the design rationale.
 
   ## Quick start
 

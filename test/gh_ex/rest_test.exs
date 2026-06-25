@@ -137,4 +137,46 @@ defmodule GhEx.RESTTest do
       assert meta.rate_limit == nil
     end
   end
+
+  describe "rate-limit retry" do
+    test "GhEx.RateLimit.retry retries a 403 secondary rate limit, then succeeds" do
+      {:ok, calls} = Agent.start_link(fn -> 0 end)
+
+      Req.Test.stub(__MODULE__.Retry, fn conn ->
+        n = Agent.get_and_update(calls, fn n -> {n, n + 1} end)
+
+        if n == 0 do
+          conn
+          |> Plug.Conn.put_resp_header("retry-after", "0")
+          |> Plug.Conn.put_status(403)
+          |> Req.Test.json(%{"message" => "You have exceeded a secondary rate limit"})
+        else
+          Req.Test.json(conn, %{"ok" => true})
+        end
+      end)
+
+      client =
+        GhEx.new(
+          req_options: [plug: {Req.Test, __MODULE__.Retry}, retry: &GhEx.RateLimit.retry/2]
+        )
+
+      assert {:ok, %{"ok" => true}, _meta} = GhEx.REST.get(client, "/x")
+      assert Agent.get(calls, & &1) == 2
+    end
+
+    test "a plain 403 (not a rate limit) is not retried" do
+      Req.Test.stub(__MODULE__.Plain403, fn conn ->
+        conn
+        |> Plug.Conn.put_status(403)
+        |> Req.Test.json(%{"message" => "Forbidden"})
+      end)
+
+      client =
+        GhEx.new(
+          req_options: [plug: {Req.Test, __MODULE__.Plain403}, retry: &GhEx.RateLimit.retry/2]
+        )
+
+      assert {:error, %GhEx.Error{status: 403}} = GhEx.REST.get(client, "/x")
+    end
+  end
 end

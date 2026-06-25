@@ -21,7 +21,14 @@ defmodule GhEx.Error do
           documentation_url: String.t() | nil
         }
 
-  @doc false
+  @doc """
+  Builds an error from a failed REST response.
+
+  Populates `:status`, `:message`, `:body`, `:errors`, and `:documentation_url`
+  from the response status and JSON body. `:errors` is set when the body carries
+  a top-level `"errors"` array.
+  """
+  @spec from_response(Req.Response.t()) :: t()
   def from_response(%Req.Response{status: status, body: body}) do
     %__MODULE__{
       status: status,

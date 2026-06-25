@@ -10,7 +10,7 @@ defmodule GhEx.REST.Meta do
   """
 
   @type t :: %__MODULE__{
-          status: pos_integer(),
+          status: pos_integer() | nil,
           headers: map() | list(),
           links: %{optional(String.t()) => String.t()},
           rate_limit: GhEx.RateLimit.t() | nil

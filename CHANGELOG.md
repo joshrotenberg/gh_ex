@@ -1,8 +1,8 @@
 # Changelog
 
 All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
-follow semantic versioning once it reaches a release.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
+semantic versioning.
 
 ## [0.2.0](https://github.com/joshrotenberg/gh_ex/compare/v0.1.0...v0.2.0) (2026-06-25)
 
@@ -11,8 +11,6 @@ follow semantic versioning once it reaches a release.
 
 * add GhEx.REST.raw/4 and GhEx.RateLimit.get/1 ([58550fd](https://github.com/joshrotenberg/gh_ex/commit/58550fd00301ccd7c366f7ba38d207d9eded4588))
 * add GhEx.Webhooks for signature verification and payload parsing ([5a01e07](https://github.com/joshrotenberg/gh_ex/commit/5a01e078866ee2158f35a62b368a6ebc22035484))
-
-## [Unreleased]
 
 ## [0.1.0] - 2026-06-24
 
@@ -40,5 +38,4 @@ follow semantic versioning once it reaches a release.
   policy that backs off on secondary rate limits (a `403` with `retry-after` or
   `x-ratelimit-remaining: 0`).
 
-[Unreleased]: https://github.com/joshrotenberg/gh_ex/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/joshrotenberg/gh_ex/releases/tag/v0.1.0

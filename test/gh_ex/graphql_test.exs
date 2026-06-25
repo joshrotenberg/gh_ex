@@ -28,6 +28,17 @@ defmodule GhEx.GraphQLTest do
       assert meta.status == 200
     end
 
+    test "normalizes a non-200 HTTP response into a GhEx.Error" do
+      Req.Test.stub(__MODULE__.HTTP503, fn conn ->
+        conn
+        |> Plug.Conn.put_status(503)
+        |> Req.Test.json(%{"message" => "Service Unavailable"})
+      end)
+
+      assert {:error, %GhEx.Error{status: 503, message: "Service Unavailable"}} =
+               GhEx.GraphQL.query(client(__MODULE__.HTTP503), "query { viewer { login } }")
+    end
+
     test "passes variables through in the envelope" do
       Req.Test.stub(__MODULE__.Vars, fn conn ->
         assert %{"variables" => %{"login" => "josh"}} = decode_body(conn)

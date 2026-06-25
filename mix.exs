@@ -16,7 +16,8 @@ defmodule GhEx.MixProject do
       docs: docs(),
       name: "gh_ex",
       source_url: @source_url,
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: [plt_local_path: "priv/plts", plt_core_path: "priv/plts"]
     ]
   end
 
@@ -43,7 +44,8 @@ defmodule GhEx.MixProject do
       {:plug, "~> 1.16", only: :test},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.18", only: :test}
+      {:excoveralls, "~> 0.18", only: :test},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 

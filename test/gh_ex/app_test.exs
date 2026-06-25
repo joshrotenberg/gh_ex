@@ -72,5 +72,16 @@ defmodule GhEx.AppTest do
       assert expires_at == "2026-06-22T21:00:00Z"
       assert client.req_options == [plug: {Req.Test, __MODULE__.Cli}]
     end
+
+    test "returns {:error, {:unexpected_response, body}} when the token is missing", %{pem: pem} do
+      Req.Test.stub(__MODULE__.NoTok, fn conn ->
+        conn
+        |> Plug.Conn.put_status(201)
+        |> Req.Test.json(%{"expires_at" => "2026-06-22T21:00:00Z"})
+      end)
+
+      assert {:error, {:unexpected_response, %{"expires_at" => _}}} =
+               GhEx.App.installation_client(app(__MODULE__.NoTok, pem), 42)
+    end
   end
 end

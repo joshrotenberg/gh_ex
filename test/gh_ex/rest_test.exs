@@ -65,6 +65,52 @@ defmodule GhEx.RESTTest do
     end
   end
 
+  describe "patch/3, put/3, delete/3" do
+    test "patch/3 sends a PATCH with a JSON body" do
+      Req.Test.stub(__MODULE__.Patch, fn conn ->
+        assert conn.method == "PATCH"
+        {:ok, raw, conn} = Plug.Conn.read_body(conn)
+        assert Jason.decode!(raw) == %{"state" => "closed"}
+        Req.Test.json(conn, %{"state" => "closed"})
+      end)
+
+      assert {:ok, %{"state" => "closed"}, meta} =
+               GhEx.REST.patch(client(__MODULE__.Patch), "/repos/o/r/issues/1",
+                 json: %{state: "closed"}
+               )
+
+      assert meta.status == 200
+    end
+
+    test "put/3 sends a PUT" do
+      Req.Test.stub(__MODULE__.Put, fn conn ->
+        assert conn.method == "PUT"
+
+        conn
+        |> Plug.Conn.put_status(200)
+        |> Req.Test.json(%{"ok" => true})
+      end)
+
+      assert {:ok, %{"ok" => true}, _meta} =
+               GhEx.REST.put(client(__MODULE__.Put), "/repos/o/r/subscription",
+                 json: %{subscribed: true}
+               )
+    end
+
+    test "delete/3 sends a DELETE and handles a 204 with an empty body" do
+      Req.Test.stub(__MODULE__.Delete, fn conn ->
+        assert conn.method == "DELETE"
+        Plug.Conn.send_resp(conn, 204, "")
+      end)
+
+      assert {:ok, body, meta} =
+               GhEx.REST.delete(client(__MODULE__.Delete), "/repos/o/r/issues/1/labels/bug")
+
+      assert meta.status == 204
+      assert body in ["", nil]
+    end
+  end
+
   describe "meta" do
     test "parses rate-limit headers into a snapshot" do
       Req.Test.stub(__MODULE__.RL, fn conn ->
@@ -81,6 +127,13 @@ defmodule GhEx.RESTTest do
       assert meta.rate_limit.remaining == 4998
       assert meta.rate_limit.used == 2
       assert meta.rate_limit.reset == ~U[2023-11-14 22:13:20Z]
+    end
+
+    test "rate_limit is nil when no rate-limit headers are present" do
+      Req.Test.stub(__MODULE__.NoRL, fn conn -> Req.Test.json(conn, %{}) end)
+
+      assert {:ok, _body, meta} = GhEx.REST.get(client(__MODULE__.NoRL), "/x")
+      assert meta.rate_limit == nil
     end
   end
 end

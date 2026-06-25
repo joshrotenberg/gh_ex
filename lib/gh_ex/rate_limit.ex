@@ -90,6 +90,15 @@ defmodule GhEx.RateLimit do
     end
   end
 
+  @doc """
+  Fetches rate-limit status from `GET /rate_limit`.
+
+  This endpoint does not count against your rate limit. Returns the full body,
+  whose `"resources"` map covers `core`, `search`, `graphql`, and others.
+  """
+  @spec get(GhEx.Client.t()) :: GhEx.REST.result()
+  def get(client), do: GhEx.REST.get(client, "/rate_limit")
+
   defp header_str(resp, name) do
     case Req.Response.get_header(resp, name) do
       [value | _] -> value

@@ -48,6 +48,27 @@ defmodule GhEx.REST do
   def delete(client, path, opts \\ []), do: request(client, :delete, path, opts)
 
   @doc """
+  Runs a request and returns the raw `Req.Response`, without normalizing it.
+
+  Unlike the verb functions, a non-2xx response comes back as
+  `{:ok, %Req.Response{}}` (inspect `resp.status` yourself) rather than
+  `{:error, _}`. Useful when a `404` means "absent" rather than an error, or when
+  you need the raw status, headers, or body, or custom decoding. Auth resolution
+  can still fail, returning `{:error, reason}`. Compose with
+  `GhEx.Pagination.links/1` and `GhEx.RateLimit.from_response/1` for links or a
+  rate-limit snapshot.
+  """
+  @spec raw(Client.t(), atom(), String.t(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, term()}
+  def raw(client, method, path, opts \\ []) do
+    with {:ok, client} <- Auth.resolve(client) do
+      client
+      |> Request.build(method, path, opts)
+      |> Req.request()
+    end
+  end
+
+  @doc """
   Auto-paginates a list endpoint into a lazy `Stream` of individual items.
 
   Follows the `Link: rel="next"` header until GitHub stops handing one back.

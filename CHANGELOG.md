@@ -6,6 +6,8 @@ follow semantic versioning once it reaches a release.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-24
+
 ### Added
 
 - REST core (`GhEx.REST`): `get/post/patch/put/delete` returning `{:ok, body, meta}`
@@ -30,4 +32,5 @@ follow semantic versioning once it reaches a release.
   policy that backs off on secondary rate limits (a `403` with `retry-after` or
   `x-ratelimit-remaining: 0`).
 
-[Unreleased]: https://github.com/joshrotenberg/gh_ex
+[Unreleased]: https://github.com/joshrotenberg/gh_ex/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/joshrotenberg/gh_ex/releases/tag/v0.1.0

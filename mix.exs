@@ -51,14 +51,14 @@ defmodule GhEx.MixProject do
       source_ref: "v#{@version}",
       extras: ["README.md", "CHANGELOG.md", "SPEC.md"],
       groups_for_modules: [
-        Core: [GH, GH.Client, GH.REST, GH.GraphQL],
-        Authentication: [GH.Auth, GH.JWT, GH.App, GH.TokenCache, GH.TokenCache.ETS],
+        Core: [GhEx, GhEx.Client, GhEx.REST, GhEx.GraphQL],
+        Authentication: [GhEx.Auth, GhEx.JWT, GhEx.App, GhEx.TokenCache, GhEx.TokenCache.ETS],
         "Pagination & metadata": [
-          GH.Pagination,
-          GH.RateLimit,
-          GH.Error,
-          GH.REST.Meta,
-          GH.GraphQL.Meta
+          GhEx.Pagination,
+          GhEx.RateLimit,
+          GhEx.Error,
+          GhEx.REST.Meta,
+          GhEx.GraphQL.Meta
         ]
       ]
     ]

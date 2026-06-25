@@ -7,13 +7,13 @@ questions at the bottom.
 
 ### M1: REST core over Req
 - [x] `mix new`, formatter, `.gitignore`
-- [x] `GH.Client` struct + `GH.new/1`
-- [x] `GH.Auth` token path + bearer header injection
-- [x] `GH.Request.build/4` with required headers
-- [x] `GH.REST.get/post/patch/put/delete` -> `{:ok, body, meta}` / `{:error, reason}`
-- [x] `GH.Error` normalization of 4xx/5xx, also an exception
-- [x] Link-header auto-pagination as a `Stream` (`GH.REST.stream/3`)
-- [x] `GH.RateLimit` header snapshot in `meta`
+- [x] `GhEx.Client` struct + `GhEx.new/1`
+- [x] `GhEx.Auth` token path + bearer header injection
+- [x] `GhEx.Request.build/4` with required headers
+- [x] `GhEx.REST.get/post/patch/put/delete` -> `{:ok, body, meta}` / `{:error, reason}`
+- [x] `GhEx.Error` normalization of 4xx/5xx, also an exception
+- [x] Link-header auto-pagination as a `Stream` (`GhEx.REST.stream/3`)
+- [x] `GhEx.RateLimit` header snapshot in `meta`
 - [x] `Req.Test` harness + first doctests (13 tests, 4 doctests, green)
 
 ## Documentation (kept current as we build)
@@ -24,18 +24,19 @@ questions at the bottom.
   as M3b lands; keep module docs written inline with the code.
 
 ## M1 loose end
-- [ ] CI: GitHub Actions running `mix format --check-formatted` and `mix test`
-      (consider `credo` and `dialyzer` as optional gates)
+- [x] CI: GitHub Actions running `mix format --check-formatted`,
+      `mix compile --warnings-as-errors`, and `mix test` across an Elixir 1.17/1.18
+      matrix (consider `credo` and `dialyzer` as optional gates later)
 
 ## M2 GraphQL core (the go/no-go milestone)
-- [x] `GH.GraphQL.query/3` over Req: query string + variables (keyword or map), shares
-      `GH.Client` + auth via `GH.Request.build_graphql/3`
-- [x] Normalize 200-with-`errors` body into `GH.Error` (`from_graphql/2`, partial data
+- [x] `GhEx.GraphQL.query/3` over Req: query string + variables (keyword or map), shares
+      `GhEx.Client` + auth via `GhEx.Request.build_graphql/3`
+- [x] Normalize 200-with-`errors` body into `GhEx.Error` (`from_graphql/2`, partial data
       preserved on `:body`)
-- [x] Cursor pagination via `pageInfo` exposed as `GH.GraphQL.stream/4`, mirroring
-      `GH.REST.stream/3` (caller gives `:path` to the connection; `:cursor_var`/`:nodes_key`
+- [x] Cursor pagination via `pageInfo` exposed as `GhEx.GraphQL.stream/4`, mirroring
+      `GhEx.REST.stream/3` (caller gives `:path` to the connection; `:cursor_var`/`:nodes_key`
       configurable)
-- [x] GraphQL rate-limit cost block surfaced on `GH.GraphQL.Meta.cost` (raw map, lossless;
+- [x] GraphQL rate-limit cost block surfaced on `GhEx.GraphQL.Meta.cost` (raw map, lossless;
       `:rate_limit` stays the header-based view for parity with REST)
 - [x] `Req.Test` coverage: query, variables, errors-array, empty-errors, cost block,
       cursor paging, stream error (20 tests green, 4 doctests)
@@ -51,12 +52,12 @@ algorithm via `:public_key`/`:crypto`). `jose` stays an escape hatch if a real
 PEM exposes an edge case. Built in two stages.
 
 ### M3a: stateless primitive (done)
-- [x] `GH.JWT.mint/3`: OTP-native RS256 GitHub App JWT (iss/iat/exp, clock-skew
+- [x] `GhEx.JWT.mint/3`: OTP-native RS256 GitHub App JWT (iss/iat/exp, clock-skew
       backdating, sub-600s lifetime). Verified against real OTP crypto in tests.
-- [x] `GH.Auth` `{:app, issuer, pem}` resolves to a fresh bearer JWT per request
-- [x] `GH.App.installation_token/3` mints an installation token, returns the full
+- [x] `GhEx.Auth` `{:app, issuer, pem}` resolves to a fresh bearer JWT per request
+- [x] `GhEx.App.installation_token/3` mints an installation token, returns the full
       body (token, expires_at, permissions, repository_selection); `:json` scopes it
-- [x] `GH.App.installation_client/3` returns a token-auth client + expires_at,
+- [x] `GhEx.App.installation_client/3` returns a token-auth client + expires_at,
       inheriting the app client's URLs and req_options
 - [x] Tests: JWT claims + signature verify, numeric issuer, skew/lifetime,
       req_auth app path, token mint (success/scoped/error), client mint (28 green)
@@ -64,11 +65,11 @@ PEM exposes an edge case. Built in two stages.
       tests already pass; this just confirms GitHub accepts the JWT)
 
 ### M3b: transparent cache (done)
-- [x] `GH.TokenCache` behaviour; default `GH.TokenCache.ETS` (supervised GenServer
+- [x] `GhEx.TokenCache` behaviour; default `GhEx.TokenCache.ETS` (supervised GenServer
       owning a public ETS table, single-flight minting, refresh 60s before expiry)
-- [x] Effectful `GH.Auth.resolve/1` called by the REST and GraphQL request paths;
+- [x] Effectful `GhEx.Auth.resolve/1` called by the REST and GraphQL request paths;
       `{:installation, spec}` resolves to `{:token, t}` via the cache, minting on miss
-- [x] `GH.App.installation/3` builds a lazy installation client (no I/O at
+- [x] `GhEx.App.installation/3` builds a lazy installation client (no I/O at
       construction); credential closes over the app for transparent re-mint
 - [x] Tests: cache hit/miss/expiry/independent-keys/error (no HTTP), plus an
       integration test of transparent mint+cache+auth via Req.Test.allow (34 green)
@@ -83,6 +84,7 @@ PEM exposes an edge case. Built in two stages.
 - [ ] Hex release (0.1)
 
 ## Open decisions
-- [ ] Public namespace: `GH` (ergonomic) vs `GhEx` (unambiguous). Decide at first release.
+- [x] Public namespace: decided `GhEx` (matches the `gh_ex` package name, no
+      collision risk). Renamed from the provisional `GH` during release hardening.
 - [ ] Contract-test boundary: `Req.Test` stubs vs recorded fixtures for live endpoints.
 - [ ] README rewrite happens before hex release regardless of when it lands above.

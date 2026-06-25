@@ -35,6 +35,11 @@ defmodule GhEx.Pagination do
 
   @doc """
   Parses a raw `Link` header value into a `%{rel => url}` map.
+
+  ## Examples
+
+      iex> GhEx.Pagination.parse(~s(<https://api.github.com/x?page=2>; rel="next"))
+      %{"next" => "https://api.github.com/x?page=2"}
   """
   @spec parse(String.t()) :: %{optional(String.t()) => String.t()}
   def parse(value) when is_binary(value) do

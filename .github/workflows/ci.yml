@@ -28,6 +28,7 @@ jobs:
       - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix credo --strict
+      - run: mix coveralls
       - name: Verify the package assembles
         run: mix hex.build
 

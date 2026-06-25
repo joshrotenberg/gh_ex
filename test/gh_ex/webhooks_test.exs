@@ -1,6 +1,8 @@
 defmodule GhEx.WebhooksTest do
   use ExUnit.Case, async: true
 
+  doctest GhEx.Webhooks
+
   @secret "s3cr3t"
   @payload ~s({"action":"opened","number":1})
 

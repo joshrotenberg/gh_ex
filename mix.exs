@@ -15,7 +15,18 @@ defmodule GhEx.MixProject do
       package: package(),
       docs: docs(),
       name: "gh_ex",
-      source_url: @source_url
+      source_url: @source_url,
+      test_coverage: [tool: ExCoveralls]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.html": :test,
+        "coveralls.github": :test
+      ]
     ]
   end
 
@@ -31,7 +42,8 @@ defmodule GhEx.MixProject do
       {:jason, "~> 1.4"},
       {:plug, "~> 1.16", only: :test},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 

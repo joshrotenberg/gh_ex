@@ -38,6 +38,11 @@ defmodule GhEx.Webhooks do
 
   @doc """
   Decodes a webhook payload (the raw JSON body) into a map.
+
+  ## Examples
+
+      iex> GhEx.Webhooks.parse(~s({"action": "opened", "number": 1}))
+      {:ok, %{"action" => "opened", "number" => 1}}
   """
   @spec parse(binary()) :: {:ok, map()} | {:error, term()}
   def parse(payload) when is_binary(payload), do: Jason.decode(payload)

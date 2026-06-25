@@ -49,7 +49,7 @@ defmodule GhEx.JWT do
       iat = now - skew
 
       header = %{"alg" => "RS256", "typ" => "JWT"}
-      claims = %{"iat" => iat, "exp" => iat + lifetime, "iss" => to_string(issuer)}
+      claims = %{"iat" => iat, "exp" => iat + lifetime, "iss" => issuer_claim(issuer)}
 
       signing_input = encode(header) <> "." <> encode(claims)
       signature = :public_key.sign(signing_input, :sha256, key)
@@ -58,6 +58,16 @@ defmodule GhEx.JWT do
   end
 
   defp encode(map), do: map |> Jason.encode!() |> Base.url_encode64(padding: false)
+
+  # GitHub requires the App ID as a JSON integer; a Client ID stays a string.
+  defp issuer_claim(issuer) when is_integer(issuer), do: issuer
+
+  defp issuer_claim(issuer) when is_binary(issuer) do
+    case Integer.parse(issuer) do
+      {int, ""} -> int
+      _ -> issuer
+    end
+  end
 
   defp validate_lifetime(lifetime) when lifetime <= @max_lifetime, do: :ok
   defp validate_lifetime(lifetime), do: {:error, {:invalid_lifetime, lifetime}}

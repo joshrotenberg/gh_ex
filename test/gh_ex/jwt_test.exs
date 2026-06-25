@@ -25,11 +25,14 @@ defmodule GhEx.JWTTest do
     assert :public_key.verify(h64 <> "." <> c64, :sha256, signature, public)
   end
 
-  test "stringifies a numeric issuer", %{pem: pem} do
-    assert {:ok, jwt} = GhEx.JWT.mint(123_456, pem, now: 1_000_000)
-    [_h, c64, _s] = String.split(jwt, ".")
-    claims = c64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
-    assert claims["iss"] == "123456"
+  test "sends a numeric issuer (App ID) as an integer", %{pem: pem} do
+    for issuer <- [123_456, "123456"] do
+      assert {:ok, jwt} = GhEx.JWT.mint(issuer, pem, now: 1_000_000)
+      [_h, c64, _s] = String.split(jwt, ".")
+      claims = c64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
+      # GitHub rejects a string App ID with "'Issuer' claim ('iss') must be an Integer".
+      assert claims["iss"] == 123_456
+    end
   end
 
   test "honors :skew and :lifetime", %{pem: pem} do

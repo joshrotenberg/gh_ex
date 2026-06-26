@@ -139,6 +139,38 @@ defmodule GhEx.GraphQLTest do
       assert titles == ["A", "B", "C"]
     end
 
+    test "halts on a page with hasNextPage true but a nil endCursor instead of looping" do
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+      Req.Test.stub(__MODULE__.NilCursor, fn conn ->
+        Agent.update(counter, &(&1 + 1))
+
+        Req.Test.json(conn, %{
+          "data" => %{
+            "organization" => %{
+              "projectsV2" => %{
+                "nodes" => [%{"title" => "A"}],
+                "pageInfo" => %{"hasNextPage" => true, "endCursor" => nil}
+              }
+            }
+          }
+        })
+      end)
+
+      titles =
+        client(__MODULE__.NilCursor)
+        |> GhEx.GraphQL.stream(
+          "query($org: String!, $cursor: String) { ... }",
+          [org: "joshrotenberg"],
+          path: ["organization", "projectsV2"]
+        )
+        |> Stream.map(& &1["title"])
+        |> Enum.to_list()
+
+      assert titles == ["A"]
+      assert Agent.get(counter, & &1) == 1
+    end
+
     test "raises GhEx.Error when a page returns GraphQL errors" do
       Req.Test.stub(__MODULE__.StreamErr, fn conn ->
         Req.Test.json(conn, %{"data" => nil, "errors" => [%{"message" => "boom"}]})

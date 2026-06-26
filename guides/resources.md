@@ -1,0 +1,135 @@
+# Resource modules
+
+The convenience modules are thin wrappers over `GhEx.REST` that fill in the
+endpoint path. Each function returns the same `{:ok, body, meta}` /
+`{:error, reason}` shape as the core and passes `opts` through to `Req` (so
+`:params`, `:json`, headers, and a `Req.Test` plug all work). They cover the
+common paths; for anything else, call `GhEx.REST` directly.
+
+The `list_*` functions return a single page. For auto-pagination, use
+`GhEx.REST.stream/3` with the path (see the [Pagination](pagination.md) guide).
+
+## Issues
+
+`GhEx.Issues` — list, get, create, update, comment, label.
+
+```elixir
+GhEx.Issues.list(client, "elixir-lang", "elixir", params: [state: "open"])
+GhEx.Issues.create(client, "o", "r", %{title: "Bug", body: "..."})
+GhEx.Issues.create_comment(client, "o", "r", 7, "thanks for the report")
+GhEx.Issues.add_labels(client, "o", "r", 7, ["bug", "p1"])
+```
+
+## Pull requests
+
+`GhEx.PullRequests` — list, get, create, update, merge, files, reviews.
+
+```elixir
+GhEx.PullRequests.create(client, "o", "r", %{title: "Fix", head: "fix", base: "main"})
+GhEx.PullRequests.list_files(client, "o", "r", 42)
+GhEx.PullRequests.merge(client, "o", "r", 42, %{merge_method: "squash"})
+GhEx.PullRequests.create_review(client, "o", "r", 42, %{event: "APPROVE"})
+```
+
+## Repositories and contents
+
+`GhEx.Repositories` — get, list (org/user), create, update, delete, commits,
+branches. `GhEx.Contents` — read and write files.
+
+```elixir
+GhEx.Repositories.get(client, "elixir-lang", "elixir")
+GhEx.Repositories.list_for_org(client, "elixir-lang", params: [type: "public"])
+
+{:ok, file, _meta} = GhEx.Contents.get(client, "o", "r", "mix.exs", params: [ref: "main"])
+
+GhEx.Contents.create_or_update_file(client, "o", "r", "NOTES.md", %{
+  message: "add notes",
+  content: Base.encode64("hello"),
+  sha: file["sha"]
+})
+```
+
+`content` is Base64-encoded, and updating an existing file needs its blob `sha`.
+
+## Releases
+
+`GhEx.Releases` — list, get, get_latest, get_by_tag, create, update, delete.
+
+```elixir
+GhEx.Releases.get_latest(client, "o", "r")
+
+GhEx.Releases.create(client, "o", "r", %{
+  tag_name: "v1.0.0",
+  name: "v1.0.0",
+  generate_release_notes: true
+})
+```
+
+## Actions
+
+`GhEx.Actions` — workflows, runs, dispatch. A workflow is its numeric id or its
+file name (`"ci.yml"`).
+
+```elixir
+GhEx.Actions.list_workflows(client, "o", "r")
+GhEx.Actions.dispatch_workflow(client, "o", "r", "ci.yml", %{ref: "main", inputs: %{env: "prod"}})
+GhEx.Actions.list_runs(client, "o", "r", params: [branch: "main", status: "failure"])
+GhEx.Actions.rerun(client, "o", "r", run_id)
+```
+
+## Checks and statuses
+
+`GhEx.Checks` — check runs. `GhEx.Statuses` — commit statuses.
+
+```elixir
+GhEx.Checks.create_run(client, "o", "r", %{name: "lint", head_sha: sha, status: "in_progress"})
+GhEx.Checks.list_for_ref(client, "o", "r", sha)
+
+GhEx.Statuses.create(client, "o", "r", sha, %{state: "success", context: "ci/lint"})
+GhEx.Statuses.get_combined(client, "o", "r", "main")
+```
+
+## Search
+
+`GhEx.Search` — repositories, code, issues_and_pull_requests, users, commits. The
+first argument is the `q` query; pass `params:` for `sort` and `order`.
+
+```elixir
+GhEx.Search.repositories(client, "tetris language:elixir", params: [sort: "stars"])
+GhEx.Search.issues_and_pull_requests(client, "repo:o/r is:open label:bug")
+```
+
+## Users, organizations, and teams
+
+`GhEx.Users`, `GhEx.Organizations`, `GhEx.Teams`.
+
+```elixir
+GhEx.Users.get_authenticated(client)
+GhEx.Users.get(client, "joshrotenberg")
+GhEx.Organizations.list_members(client, "elixir-lang")
+GhEx.Teams.list(client, "elixir-lang")
+```
+
+## Gists
+
+`GhEx.Gists` — list, get, create, update, delete.
+
+```elixir
+GhEx.Gists.create(client, %{
+  description: "example",
+  public: false,
+  files: %{"hello.txt" => %{content: "hi"}}
+})
+```
+
+## Webhooks
+
+`GhEx.Webhooks` is the receiving side: verify a delivery signature and parse the
+payload. See the [Testing](testing.md) guide for the full handler pattern.
+
+```elixir
+with :ok <- GhEx.Webhooks.verify(body, signature, secret),
+     {:ok, payload} <- GhEx.Webhooks.parse(body) do
+  handle(event_name, payload)
+end
+```

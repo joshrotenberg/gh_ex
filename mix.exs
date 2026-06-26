@@ -68,6 +68,7 @@ defmodule GhEx.MixProject do
       extras: [
         "README.md",
         "guides/getting-started.md",
+        "guides/resources.md",
         "guides/authentication.md",
         "guides/pagination.md",
         "guides/error-handling.md",

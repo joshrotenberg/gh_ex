@@ -81,7 +81,14 @@ defmodule GhEx.MixProject do
       ],
       groups_for_modules: [
         Core: [GhEx, GhEx.Client, GhEx.REST, GhEx.GraphQL],
-        Resources: [GhEx.Issues, GhEx.PullRequests, GhEx.Webhooks],
+        Resources: [
+          GhEx.Issues,
+          GhEx.PullRequests,
+          GhEx.Repositories,
+          GhEx.Contents,
+          GhEx.Releases,
+          GhEx.Webhooks
+        ],
         Authentication: [GhEx.Auth, GhEx.JWT, GhEx.App, GhEx.TokenCache, GhEx.TokenCache.ETS],
         "Pagination & metadata": [
           GhEx.Pagination,

@@ -23,6 +23,18 @@ defmodule GhEx.ContentsTest do
              )
   end
 
+  test "get/4 percent-encodes reserved characters in the path, preserving slashes" do
+    Req.Test.stub(__MODULE__.Encode, fn conn ->
+      # `#`, `?`, and the space would otherwise truncate or mis-target the path;
+      # `/` stays a literal separator so the directory hierarchy is preserved.
+      assert conn.request_path == "/repos/o/r/contents/dir/a%23b%20c%3Fd.ex"
+      Req.Test.json(conn, %{"path" => "dir/a#b c?d.ex"})
+    end)
+
+    assert {:ok, %{"path" => _}, _} =
+             GhEx.Contents.get(client(__MODULE__.Encode), "o", "r", "dir/a#b c?d.ex")
+  end
+
   test "create_or_update_file/5 PUTs the body" do
     Req.Test.stub(__MODULE__.Put, fn conn ->
       assert conn.method == "PUT"

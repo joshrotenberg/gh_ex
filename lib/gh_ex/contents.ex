@@ -17,7 +17,7 @@ defmodule GhEx.Contents do
   """
   @spec get(Client.t(), String.t(), String.t(), String.t(), keyword()) :: REST.result()
   def get(client, owner, repo, path, opts \\ []) do
-    REST.get(client, "/repos/#{owner}/#{repo}/contents/#{path}", opts)
+    REST.get(client, "/repos/#{owner}/#{repo}/contents/#{encode_path(path)}", opts)
   end
 
   @doc """
@@ -28,7 +28,11 @@ defmodule GhEx.Contents do
   @spec create_or_update_file(Client.t(), String.t(), String.t(), String.t(), map(), keyword()) ::
           REST.result()
   def create_or_update_file(client, owner, repo, path, attrs, opts \\ []) do
-    REST.put(client, "/repos/#{owner}/#{repo}/contents/#{path}", Keyword.put(opts, :json, attrs))
+    REST.put(
+      client,
+      "/repos/#{owner}/#{repo}/contents/#{encode_path(path)}",
+      Keyword.put(opts, :json, attrs)
+    )
   end
 
   @doc """
@@ -40,8 +44,18 @@ defmodule GhEx.Contents do
   def delete_file(client, owner, repo, path, attrs, opts \\ []) do
     REST.delete(
       client,
-      "/repos/#{owner}/#{repo}/contents/#{path}",
+      "/repos/#{owner}/#{repo}/contents/#{encode_path(path)}",
       Keyword.put(opts, :json, attrs)
     )
+  end
+
+  # Req does not encode an already-built URL string, so a raw `path` with a
+  # space, `#`, or `?` produces an invalid or wrong target. Split on `/` to keep
+  # the path hierarchy, percent-encode each segment (leaving only the unreserved
+  # set A-Z a-z 0-9 - _ . ~ literal), and rejoin.
+  defp encode_path(path) do
+    path
+    |> String.split("/")
+    |> Enum.map_join("/", &URI.encode(&1, fn c -> URI.char_unreserved?(c) end))
   end
 end

@@ -89,6 +89,12 @@ defmodule GhEx.MixProject do
           GhEx.Releases,
           GhEx.Actions,
           GhEx.Search,
+          GhEx.Users,
+          GhEx.Organizations,
+          GhEx.Teams,
+          GhEx.Checks,
+          GhEx.Statuses,
+          GhEx.Gists,
           GhEx.Webhooks
         ],
         Authentication: [GhEx.Auth, GhEx.JWT, GhEx.App, GhEx.TokenCache, GhEx.TokenCache.ETS],

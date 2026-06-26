@@ -76,6 +76,11 @@ defmodule GhEx.REST do
   `next` URL GitHub returns, so cursors are never double-applied. A failed page
   raises `GhEx.Error`.
 
+  A `next` URL whose origin (scheme, host, port) differs from the client's
+  `rest_url` is refused with `GhEx.Error` rather than followed, so the bearer is
+  never re-applied to an unauthorized host. A non-default GitHub Enterprise
+  `rest_url` paginates normally, since its pages stay on the same origin.
+
       client
       |> GhEx.REST.stream("/repos/elixir-lang/elixir/issues", params: [state: "all", per_page: 100])
       |> Stream.map(& &1["number"])
@@ -93,10 +98,27 @@ defmodule GhEx.REST do
           emit(request(client, :get, path, opts))
 
         {:next, url} ->
+          unless same_origin?(url, client.rest_url) do
+            raise %Error{
+              message: "refused cross-host pagination URL: #{URI.parse(url).host}"
+            }
+          end
+
           emit(request(client, :get, url, []))
       end,
       fn _ -> :ok end
     )
+  end
+
+  # Guards against a malicious or misconfigured upstream handing back a
+  # `Link: rel="next"` that points at a different host. Following it would
+  # re-apply the bearer to a host the caller never authorized, leaking the
+  # credential. Same-origin is scheme + host + port against `client.rest_url`,
+  # so a legitimate non-default GHE base still paginates.
+  defp same_origin?(url, base) do
+    a = URI.parse(url)
+    b = URI.parse(base)
+    a.scheme == b.scheme and a.host == b.host and a.port == b.port
   end
 
   defp emit({:ok, body, meta}) when is_list(body) do

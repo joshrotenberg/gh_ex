@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 semantic versioning.
 
+## [0.3.0](https://github.com/joshrotenberg/gh_ex/compare/v0.2.1...v0.3.0) (2026-06-26)
+
+
+### Features
+
+* add Repositories, Contents, and Releases convenience modules ([#52](https://github.com/joshrotenberg/gh_ex/issues/52)) ([a95e241](https://github.com/joshrotenberg/gh_ex/commit/a95e24113d3f6bfd3f228f882c2303540d21cedd))
+
 ## [0.2.1](https://github.com/joshrotenberg/gh_ex/compare/v0.2.0...v0.2.1) (2026-06-25)
 
 

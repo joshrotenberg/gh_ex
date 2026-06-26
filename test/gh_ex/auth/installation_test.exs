@@ -48,6 +48,13 @@ defmodule GhEx.Auth.InstallationTest do
 
     # Two requests, one mint: the token was cached after the first.
     assert :counters.get(mints, 1) == 1
+
+    # The cached token is a redacting struct, so a crash dump of the ETS table
+    # (or any inspect of it) never prints the token in cleartext.
+    [{_key, value}] = :ets.tab2list(__MODULE__.Cache)
+    assert %GhEx.TokenCache.Value{token: "ghs_inst"} = value
+    refute inspect(value) =~ "ghs_inst"
+    assert inspect(value) =~ "GhEx.TokenCache.Value"
   end
 
   test "surfaces a mint failure as the request result",

@@ -58,6 +58,25 @@ defmodule GhEx.Error do
     }
   end
 
+  @doc """
+  Builds an error from a GraphQL HTTP 200 whose body is not a JSON object.
+
+  GitHub's GraphQL endpoint answers 200 with a JSON object envelope; a list,
+  scalar, or `nil` body cannot carry `data`/`errors` and is unusable. `:status`
+  is left `nil` (the HTTP 200 is not the error) and the raw body is preserved on
+  `:body` for diagnostics.
+  """
+  @spec from_graphql_shape(term()) :: t()
+  def from_graphql_shape(body) do
+    %__MODULE__{
+      status: nil,
+      message: "GraphQL response body was not a JSON object",
+      body: body,
+      errors: nil,
+      documentation_url: nil
+    }
+  end
+
   @impl true
   def message(%__MODULE__{status: status, message: msg}) do
     "GitHub API error" <> status_part(status) <> message_part(msg)

@@ -79,6 +79,21 @@ defmodule GhEx.GraphQLTest do
                GhEx.GraphQL.query(client(__MODULE__.EmptyErr), "query { viewer { login } }")
     end
 
+    test "labels a 200 with a non-map body as a shape error, not an HTTP 200 error" do
+      Req.Test.stub(__MODULE__.NonMap, fn conn ->
+        Req.Test.json(conn, ["unexpected", "array"])
+      end)
+
+      assert {:error, %GhEx.Error{} = err} =
+               GhEx.GraphQL.query(client(__MODULE__.NonMap), "query { viewer { login } }")
+
+      assert err.status == nil
+      assert err.body == ["unexpected", "array"]
+      assert err.errors == nil
+      refute Exception.message(err) =~ "HTTP 200"
+      assert Exception.message(err) =~ "not a JSON object"
+    end
+
     test "exposes the rateLimit cost block on meta when selected" do
       Req.Test.stub(__MODULE__.Cost, fn conn ->
         Req.Test.json(conn, %{

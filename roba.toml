@@ -1,0 +1,138 @@
+# roba.toml -- gh_ex (joshrotenberg/gh_ex)
+# =========================================
+# A Req-based Elixir client for the GitHub REST and GraphQL APIs.
+#
+# Follows roba's "safe default + named loaded guns" pattern:
+#   - Top level is SAFE (read-only). NO top-level full_auto, NO top-level
+#     worktree -- those are loaded guns and live ONLY in [profile.worker].
+#     `roba config lint` enforces this; keep it green.
+#   - The dispatch posture (bypass tool checks + caps) is named explicitly
+#     in [profile.worker], an opt-in you reach for per run.
+#
+# Gates are ELIXIR/mix (not cargo). The local gate mirrors CI:
+#   mix format --check-formatted && mix compile --warnings-as-errors
+#     && mix credo --strict && mix test && mix dialyzer
+#
+# WHY worker.worktree = false (deliberate, gh_ex-specific): priv/plts is
+# gitignored, and dialyzer's plt_local_path/plt_core_path point there. A fresh
+# git worktree would ship WITHOUT the ~7MB of warm PLTs (and without _build),
+# so every run would cold-rebuild the PLT -- minutes of dialyzer per issue.
+# Working on a branch in the main checkout keeps _build + priv/plts warm, so
+# the full gate stays ~2-3s. The cost is no parallel isolation, which the
+# serial "work issues one at a time, watching" flow does not need. For true
+# PARALLEL unattended fan-out, flip worktree = true AND point the PLT at a
+# shared absolute path in mix.exs first, or every worker pays the cold tax.
+#
+# CAVEAT when you read a worker's "gates green": the worker's local toolchain
+# (OTP 29 / Elixir 1.20.1) is NEWER than CI (OTP 27 / Elixir 1.17-1.18 under
+# --warnings-as-errors), and CI also runs coveralls + hex.build. Local-green
+# is necessary but NOT sufficient; the authoritative verdict is CI on the PR.
+
+# ===========================================================================
+# Top-level defaults -- SAFE. Apply to every roba call in this repo.
+# ===========================================================================
+readonly = true
+git_log = 10
+
+# ===========================================================================
+# Lifecycle profiles -- plan (read-only) -> worker (the mutating shot) ->
+# review (read-only). roba is the per-phase WORKER; the sequencing and the
+# CI-watch/merge tail (which span turns) are composition you drive with gh
+# and a thin loop, never a chain baked into config.
+# ===========================================================================
+
+# PLAN -- read-only orientation against recent history.
+#   roba --profile plan "how should I approach #59?"
+[profile.plan]
+readonly = true
+git_log = 10
+
+# WORKER -- the dispatch posture (the named loaded gun): bypass tool checks
+# and CAP the run so an unattended worker self-arrests. No worktree (see the
+# header note); the worker branches in the main checkout to keep the gate warm.
+#   roba --profile worker -f task.md
+[profile.worker]
+full_auto = true
+worktree = false
+max_turns = 60
+max_budget_usd = 8.0
+
+# REVIEW -- read-only against the working-tree diff.
+#   roba --profile review "is this safe to merge?"
+[profile.review]
+readonly = true
+git_diff = true
+
+# ===========================================================================
+# Verbs (aliases). Built-in subcommands (cost/history/profile/alias/...)
+# cannot be shadowed. Naming mirrors roba's own split so habits transfer:
+#   issue N  -> read-only PLAN (summarize + propose; no code)
+#   ship N   -> the shepherd: plan -> implement -> gate -> commit -> draft PR,
+#               ALL in one run. STOPS at the draft PR. The CI-watch + merge +
+#               next-issue tail is cross-turn and lives OUTSIDE the verb
+#               (gh + a thin loop, or you).
+#   review N -> read-only PR review
+# ===========================================================================
+
+# Summarize an issue + propose an approach, read-only.  ->  roba issue 59
+[alias.issue]
+description = "Summarize an issue and propose an approach (read-only)"
+args = ["n"]
+flags = ["--readonly"]
+template = """
+Summarize issue #${n} in gh_ex and propose an implementation approach.
+This repo's issues carry an exact file:line and a recommended fix in the body --
+cite the file(s) and line(s). Do not write code.
+
+$(gh issue view ${n})
+"""
+
+# The shepherd: one command, full lifecycle to a draft PR.  ->  roba ship 59
+# full_auto via [profile.worker] -- an explicit, named loaded gun.
+[alias.ship]
+description = "Shepherd an issue through plan->implement->gate->commit->draft PR (full_auto)"
+args = ["n"]
+flags = ["--profile", "worker"]
+template = """
+Shepherd gh_ex issue #${n} through our process, in this one run:
+
+PLAN     Read the issue. Its body is the spec: an exact file:line, a verified
+         problem, and a recommended fix. State the plan in one short paragraph.
+BRANCH   Create a fresh branch off the latest main, in this checkout:
+           git fetch origin && git switch -c fix/${n} origin/main
+IMPLEMENT Make the change. Preserve the result shape
+         ({:ok, body, meta} | {:error, reason}), the standard request headers,
+         and the core-over-catalog module conventions.
+TEST     Add or extend a Req.Test-based test. No live API in the suite.
+GATE     Run and pass the full local gate, in order:
+           mix format --check-formatted && mix compile --warnings-as-errors \\
+             && mix credo --strict && mix test && mix dialyzer
+COMMIT   One conventional-commit subject (release-please/elixir consumes it).
+         No em dashes. No AI-attribution trailer.
+DRAFT PR Push and open a DRAFT PR -- plan as the body, `closes #${n}` in it.
+
+STOP at the draft PR. This run does NOT do the cross-turn tail: no
+`gh pr checks --watch`, no marking ready, no `gh pr merge`, no next issue.
+That tail rides on the durable draft PR and is driven outside this verb. Local
+gates green here is necessary but NOT the final word -- CI (OTP 27 /
+Elixir 1.17-1.18, --warnings-as-errors, plus coveralls/hex.build) is the
+authority and runs on the PR.
+
+Surface anything that does not fit rather than forcing it.
+
+$(gh issue view ${n})
+"""
+
+# Review a PR into a read-only prompt.  ->  roba review 42
+[alias.review]
+description = "Review a PR by number (read-only)"
+args = ["pr"]
+flags = ["--readonly"]
+template = """
+Review PR #${pr} in gh_ex for correctness and regressions. Check the result
+shape, request headers, test coverage (Req.Test, no live API), and the
+conventional-commit subject. Cite file:line. No style nits.
+
+Title: $(gh pr view ${pr} --json title -q '.title')
+$(gh pr diff ${pr})
+"""

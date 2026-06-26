@@ -16,8 +16,12 @@ defmodule GhEx.TokenCache do
   (single-flight), since minting is a network round-trip.
   """
 
-  @typedoc "A cached token and the moment it expires."
-  @type value :: %{token: String.t(), expires_at: DateTime.t()}
+  @typedoc """
+  A cached token and the moment it expires. `GhEx` mints a `GhEx.TokenCache.Value`
+  struct, whose `:token` is redacted from `Inspect`; a cache stores and returns it
+  opaquely.
+  """
+  @type value :: GhEx.TokenCache.Value.t()
 
   @typedoc "A function that mints a fresh token on a cache miss."
   @type mint :: (-> {:ok, value()} | {:error, term()})

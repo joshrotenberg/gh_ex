@@ -4,6 +4,14 @@ defmodule GhEx.Client do
 
   Build one with `GhEx.new/1` rather than constructing the struct by hand.
   The same client is used for both REST (`GhEx.REST`) and, later, GraphQL.
+
+  > #### Credentials are redacted from inspect output {: .info}
+  >
+  > The `:auth` field holds a secret (a bearer token, or a GitHub App's RSA
+  > private key) and is excluded from `Inspect`, so it never appears in
+  > `inspect/1`, IEx echoes, or a crash report that captures the call args.
+  > Do not defeat this by logging `client.auth` or interpolating the raw
+  > credential yourself.
   """
 
   @default_rest_url "https://api.github.com"
@@ -16,6 +24,7 @@ defmodule GhEx.Client do
           req_options: keyword()
         }
 
+  @derive {Inspect, except: [:auth]}
   defstruct auth: nil,
             rest_url: @default_rest_url,
             graphql_url: @default_graphql_url,

@@ -65,10 +65,13 @@ GhEx.Issues.list(client, "elixir-lang", "elixir", params: [state: "open"])
 GhEx.PullRequests.create(client, "o", "r", %{title: "Fix", head: "fix", base: "main"})
 ```
 
-They return the same `{:ok, body, meta}` shape as `GhEx.REST`.
+They return the same `{:ok, body, meta}` shape as `GhEx.REST`. See the
+[Resource modules](resources.md) guide for the full set (repositories, contents,
+releases, actions, search, checks, statuses, users, orgs, teams, gists).
 
 ## Next
 
+- [Resource modules](resources.md)
 - [Authentication](authentication.md)
 - [Pagination](pagination.md)
 - [Error handling](error-handling.md)

@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 semantic versioning.
 
+## [0.3.1](https://github.com/joshrotenberg/gh_ex/compare/v0.3.0...v0.3.1) (2026-06-26)
+
+
+### Features
+
+* add Actions and Search convenience modules ([#54](https://github.com/joshrotenberg/gh_ex/issues/54)) ([1fa2755](https://github.com/joshrotenberg/gh_ex/commit/1fa2755797a2372fc39dfbe9d19f4953f2c5ce2b))
+* add Users, Organizations, Teams, Checks, Statuses, and Gists convenience modules ([#57](https://github.com/joshrotenberg/gh_ex/issues/57)) ([a35f7a3](https://github.com/joshrotenberg/gh_ex/commit/a35f7a38821d991ba9f615ad3e73be05f4345e4d))
+
 ## [0.3.0](https://github.com/joshrotenberg/gh_ex/compare/v0.2.1...v0.3.0) (2026-06-26)
 
 

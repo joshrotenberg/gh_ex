@@ -124,6 +124,9 @@ defmodule GhEx.GraphQL do
     end
   end
 
+  defp handle({:ok, %Req.Response{status: 200, body: body}}),
+    do: {:error, Error.from_graphql_shape(body)}
+
   defp handle({:ok, %Req.Response{} = resp}), do: {:error, Error.from_response(resp)}
   defp handle({:error, exception}), do: {:error, exception}
 

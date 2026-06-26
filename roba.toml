@@ -71,7 +71,14 @@ git_diff = true
 #               ALL in one run. STOPS at the draft PR. The CI-watch + merge +
 #               next-issue tail is cross-turn and lives OUTSIDE the verb
 #               (gh + a thin loop, or you).
-#   review N -> read-only PR review
+#   revise P -> apply a CHANGES REQUESTED verdict to PR P's branch and push.
+#   review P -> review PR P and POST the verdict to the PR (durable, not stdout).
+#
+# Durable-context discipline: issues and PRs are the durable record, so ship
+# records decisions in the PR body and posts a clarifying issue comment rather
+# than guessing; review always posts its verdict; revise pushes commits (the
+# durable record) and posts nothing, so review's rolling verdict stays the one
+# editable comment. See CLAUDE.md "Durable context".
 # ===========================================================================
 
 # Summarize an issue + propose an approach, read-only.  ->  roba issue 59
@@ -98,6 +105,16 @@ Shepherd gh_ex issue #${n} through our process, in this one run:
 
 PLAN     Read the issue. Its body is the spec: an exact file:line, a verified
          problem, and a recommended fix. State the plan in one short paragraph.
+         If the spec is AMBIGUOUS (no clear file:line, two plausible fixes, an
+         undecided tradeoff), do NOT guess silently. POST the open question to
+         the issue, then proceed with the stated default:
+           gh issue comment ${n} --body "## Clarification needed
+           <one line: what is unresolved>
+           - Option A: <terse> -- <consequence>
+           - Option B: <terse> -- <consequence>
+           Proceeding with A unless redirected."
+         The comment is COMPLETE, not wordy: the choice and its consequence, no
+         editorializing, no em dashes (use -- or rephrase).
 BRANCH   Create a fresh branch off the latest main, in this checkout:
            git fetch origin && git switch -c fix/${n} origin/main
 IMPLEMENT Make the change. Preserve the result shape
@@ -109,7 +126,23 @@ GATE     Run and pass the full local gate, in order:
              && mix credo --strict && mix test && mix dialyzer
 COMMIT   One conventional-commit subject (release-please/elixir consumes it).
          No em dashes. No AI-attribution trailer.
-DRAFT PR Push and open a DRAFT PR -- plan as the body, `closes #${n}` in it.
+DRAFT PR Push and open a DRAFT PR with the body below. `closes #${n}` in it.
+         The PR body is the durable record of intent -- COMPLETE, not wordy,
+         factual, no em dashes:
+           ## What
+           <one or two lines: the change, in plain terms>
+           ## Why
+           closes #${n}
+           <the problem, with path:line>
+           ## Decisions
+           - <each load-bearing choice and its reason; include any
+              clarification answered on the issue and the option taken>
+           ## Tests
+           - <the Req.Test case(s) added or extended, and what they assert>
+           ## Gate
+           - format / compile --warnings-as-errors / credo --strict / test /
+             dialyzer: green locally
+           - CI (OTP 27 / Elixir 1.17-1.18, coveralls, hex.build) is the authority
 
 STOP at the draft PR. This run does NOT do the cross-turn tail: no
 `gh pr checks --watch`, no marking ready, no `gh pr merge`, no next issue.
@@ -123,15 +156,91 @@ Surface anything that does not fit rather than forcing it.
 $(gh issue view ${n})
 """
 
-# Review a PR into a read-only prompt.  ->  roba review 42
-[alias.review]
-description = "Review a PR by number (read-only)"
+# Apply a CHANGES REQUESTED verdict to an open PR's branch and push.  ->  roba revise 77
+#
+# full_auto via [profile.worker] (worktree=false -> works in the main checkout).
+# revise is a CODE worker: checks out the PR branch, addresses the blockers,
+# gates, and PUSHES. It posts NO PR comment -- the pushed commits ARE the durable
+# record, and the next `roba review ${pr}` updates the rolling verdict. (If revise
+# posted a comment, review's --edit-last would edit revise's comment instead of
+# its own verdict. Keeping review the only gh-comment author avoids that thrash.)
+[alias.revise]
+description = "Apply review feedback to an open PR's branch and push (full_auto)"
 args = ["pr"]
-flags = ["--readonly"]
+flags = ["--profile", "worker"]
 template = """
-Review PR #${pr} in gh_ex for correctness and regressions. Check the result
-shape, request headers, test coverage (Req.Test, no live API), and the
-conventional-commit subject. Cite file:line. No style nits.
+Apply the review feedback on PR #${pr} in gh_ex, in this one run.
+
+CHECKOUT  Put yourself on the PR's branch in this checkout:
+            gh pr checkout ${pr}
+ADDRESS   Read the latest **CHANGES REQUESTED** verdict on the PR (below) and
+          address each blocker. Preserve the result shape
+          ({:ok, body, meta} | {:error, reason}), the standard request headers,
+          and the core-over-catalog module conventions.
+TEST      Add or extend Req.Test coverage for the fix. No live API in the suite.
+GATE      Run and pass the full local gate, in order:
+            mix format --check-formatted && mix compile --warnings-as-errors \\
+              && mix credo --strict && mix test && mix dialyzer
+COMMIT    One conventional-commit subject. No em dashes. No AI-attribution
+          trailer.
+PUSH      Update the open PR:
+            git push
+
+Do NOT post a PR comment. The pushed commits ARE the durable record; a later
+`roba review ${pr}` updates the rolling verdict. STOP after the push: no
+`gh pr checks --watch`, no marking ready, no merge -- that cross-turn tail is
+driven outside this verb. Local gates green is necessary but NOT the final word;
+CI (OTP 27 / Elixir 1.17-1.18, --warnings-as-errors, plus coveralls/hex.build)
+is the authority and runs on the PR.
+
+Surface anything that does not fit rather than forcing it.
+
+Latest review verdict and PR conversation:
+$(gh pr view ${pr} --comments)
+"""
+
+# Review a PR and POST the verdict to the PR (durable, not stdout).  ->  roba review 77
+#
+# Permissions: read-only on CODE (no Edit/Write), plus a NARROW gh grant so it
+# can post: Bash(gh pr view:*) and Bash(gh pr comment:*). NOT Bash(gh:*) -- that
+# would also allow gh pr merge/close. The title/diff come from $() at expansion
+# time (your shell, pre-run), so claude itself only needs to run `gh pr comment`.
+#
+# Channel: `gh pr comment`, NOT `gh pr review`. ship AUTHORED the PR under this
+# same account, and GitHub 422s the author submitting an approve/request-changes/
+# comment REVIEW on their own PR. `gh pr comment` always works on a self PR.
+#
+# Noise control: --edit-last --create-if-none keeps ONE rolling verdict, so a
+# re-review (after `roba revise`) UPDATES it rather than stacking duplicates.
+[alias.review]
+description = "Review a PR by number and post the verdict to the PR (read-only code; posts via gh)"
+args = ["pr"]
+flags = ["--readonly", "--allow-tool", "Bash(gh pr view:*)", "--allow-tool", "Bash(gh pr comment:*)"]
+template = """
+Review PR #${pr} in gh_ex for correctness and regressions, then POST your
+verdict as a comment ON THE PR. Do not change any code.
+
+What to check (cite path:line; no style nits):
+- Result shape preserved ({:ok, body, meta} | {:error, reason}).
+- Standard request headers and the core-over-catalog module conventions.
+- Test coverage uses Req.Test, never the live API.
+- One conventional-commit subject, no em dashes, no AI-attribution trailer.
+
+Then post (or update) the single rolling verdict with:
+  gh pr comment ${pr} --edit-last --create-if-none --body "<your verdict>"
+
+--edit-last --create-if-none updates your prior verdict in place rather than
+stacking a new comment each run. The comment MUST start with a verdict line
+that is EXACTLY one of:
+  **LGTM** -- one line of why
+  **CHANGES REQUESTED** -- one line of why
+Follow it with the findings: each a `path:line` plus the concrete problem and
+the fix. On LGTM, still state what you checked and why it passes. The verdict
+lives on the PR as durable history -- never let it exist only in this output.
+
+You authored this PR, so a formal approve/request-changes review is not
+possible; `gh pr comment` is correct and sufficient. Surface anything that does
+not fit rather than forcing it.
 
 Title: $(gh pr view ${pr} --json title -q '.title')
 $(gh pr diff ${pr})

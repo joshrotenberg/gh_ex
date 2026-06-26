@@ -109,8 +109,8 @@ defmodule GhEx.GraphQL do
     nodes = Map.get(connection, nodes_key, [])
     page_info = Map.get(connection, "pageInfo", %{})
 
-    case page_info["hasNextPage"] do
-      true -> {nodes, {:cont, page_info["endCursor"]}}
+    case {page_info["hasNextPage"], page_info["endCursor"]} do
+      {true, cursor} when is_binary(cursor) -> {nodes, {:cont, cursor}}
       _ -> {nodes, :halt}
     end
   end

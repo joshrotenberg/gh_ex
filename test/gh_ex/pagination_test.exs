@@ -160,7 +160,8 @@ defmodule GhEx.PaginationTest do
     stub = __MODULE__.ItemsNotLeaked
 
     Req.Test.stub(stub, fn conn ->
-      assert conn.query_string == ""
+      assert conn.query_string == "per_page=100"
+      refute conn.query_string =~ "items"
       Req.Test.json(conn, %{"items" => [%{"n" => 1}]})
     end)
 
@@ -168,6 +169,51 @@ defmodule GhEx.PaginationTest do
 
     assert client |> GhEx.REST.stream("/search/things", items: "items") |> Enum.to_list() ==
              [%{"n" => 1}]
+  end
+
+  test "stream/3 defaults per_page to 100 on the first page when the caller omits it" do
+    stub = __MODULE__.DefaultPerPage
+
+    Req.Test.stub(stub, fn conn ->
+      assert conn.query_string == "per_page=100"
+      Req.Test.json(conn, [%{"n" => 1}])
+    end)
+
+    client = GhEx.new(req_options: [plug: {Req.Test, stub}])
+
+    assert client |> GhEx.REST.stream("/items") |> Enum.to_list() == [%{"n" => 1}]
+  end
+
+  test "stream/3 honors a caller-set per_page and does not override it" do
+    stub = __MODULE__.KeepPerPage
+
+    Req.Test.stub(stub, fn conn ->
+      assert conn.query_string == "per_page=50"
+      Req.Test.json(conn, [%{"n" => 1}])
+    end)
+
+    client = GhEx.new(req_options: [plug: {Req.Test, stub}])
+
+    assert client
+           |> GhEx.REST.stream("/items", params: [per_page: 50])
+           |> Enum.to_list() == [%{"n" => 1}]
+  end
+
+  test "stream/3 adds per_page alongside other :params and accepts a map" do
+    stub = __MODULE__.MapParams
+
+    Req.Test.stub(stub, fn conn ->
+      params = URI.decode_query(conn.query_string)
+      assert params["state"] == "open"
+      assert params["per_page"] == "100"
+      Req.Test.json(conn, [%{"n" => 1}])
+    end)
+
+    client = GhEx.new(req_options: [plug: {Req.Test, stub}])
+
+    assert client
+           |> GhEx.REST.stream("/items", params: %{state: "open"})
+           |> Enum.to_list() == [%{"n" => 1}]
   end
 
   defp page_two_url(conn) do

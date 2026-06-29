@@ -81,6 +81,11 @@ defmodule GhEx.REST do
   never re-applied to an unauthorized host. A non-default GitHub Enterprise
   `rest_url` paginates normally, since its pages stay on the same origin.
 
+  `per_page` defaults to `100` for the first page when the caller does not set
+  it, so a stream pages at GitHub's maximum rather than its default of `30`,
+  cutting request count and rate-limit burn for large collections. Subsequent
+  pages follow the `next` URL verbatim, which already carries the page size.
+
   ## Options
 
     * `:items` - the key under which an object-wrapped response holds its array,
@@ -99,6 +104,7 @@ defmodule GhEx.REST do
   @spec stream(Client.t(), String.t(), keyword()) :: Enumerable.t()
   def stream(client, path, opts \\ []) do
     {items_key, opts} = Keyword.pop(opts, :items)
+    opts = default_per_page(opts)
 
     Stream.resource(
       fn -> {:first, path, opts} end,
@@ -131,6 +137,27 @@ defmodule GhEx.REST do
     a = URI.parse(url)
     b = URI.parse(base)
     a.scheme == b.scheme and a.host == b.host and a.port == b.port
+  end
+
+  # Streams have no upside to a smaller page, so default the first page to
+  # GitHub's maximum of 100 when the caller has not set `per_page`. Only the
+  # first page needs it; later pages follow the `next` URL, which already
+  # carries the page size. `:params` may be a keyword list or a map (see
+  # GhEx.Search), so honor an existing `per_page` under either key form.
+  defp default_per_page(opts) do
+    Keyword.update(opts, :params, [per_page: 100], &put_per_page/1)
+  end
+
+  defp put_per_page(params) when is_list(params) do
+    if Keyword.has_key?(params, :per_page),
+      do: params,
+      else: Keyword.put(params, :per_page, 100)
+  end
+
+  defp put_per_page(params) when is_map(params) do
+    if Map.has_key?(params, :per_page) or Map.has_key?(params, "per_page"),
+      do: params,
+      else: Map.put(params, :per_page, 100)
   end
 
   defp emit({:ok, body, meta}, nil) when is_list(body), do: paginate(body, meta)

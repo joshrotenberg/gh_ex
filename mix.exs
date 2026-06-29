@@ -98,7 +98,14 @@ defmodule GhEx.MixProject do
           GhEx.Gists,
           GhEx.Webhooks
         ],
-        Authentication: [GhEx.Auth, GhEx.JWT, GhEx.App, GhEx.TokenCache, GhEx.TokenCache.ETS],
+        Authentication: [
+          GhEx.Auth,
+          GhEx.JWT,
+          GhEx.App,
+          GhEx.TokenCache,
+          GhEx.TokenCache.ETS,
+          GhEx.TokenCache.Value
+        ],
         "Pagination & metadata": [
           GhEx.Pagination,
           GhEx.RateLimit,

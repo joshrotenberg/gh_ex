@@ -210,4 +210,57 @@ defmodule GhEx.RESTTest do
                GhEx.RateLimit.get(client(__MODULE__.RLGet))
     end
   end
+
+  describe "telemetry" do
+    setup %{test: test} do
+      events = [
+        [:gh_ex, :request, :start],
+        [:gh_ex, :request, :stop]
+      ]
+
+      :telemetry.attach_many(
+        "#{test}",
+        events,
+        fn event, measurements, metadata, pid ->
+          send(pid, {:telemetry, event, measurements, metadata})
+        end,
+        self()
+      )
+
+      on_exit(fn -> :telemetry.detach("#{test}") end)
+    end
+
+    test "emits start and stop with status and rate_limit on success" do
+      Req.Test.stub(__MODULE__.TelOK, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("x-ratelimit-remaining", "4999")
+        |> Req.Test.json(%{"ok" => true})
+      end)
+
+      assert {:ok, _body, _meta} = GhEx.REST.get(client(__MODULE__.TelOK), "/ok")
+
+      assert_received {:telemetry, [:gh_ex, :request, :start], start_m,
+                       %{method: :get, path: "/ok"}}
+
+      assert is_integer(start_m.system_time)
+
+      assert_received {:telemetry, [:gh_ex, :request, :stop], stop_m, meta}
+      assert is_integer(stop_m.duration)
+      assert meta.result == :ok
+      assert meta.status == 200
+      assert meta.rate_limit.remaining == 4999
+    end
+
+    test "stop carries result: :error and the reason on a failure" do
+      Req.Test.stub(__MODULE__.TelErr, fn conn ->
+        conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"message" => "Not Found"})
+      end)
+
+      assert {:error, %GhEx.Error{}} = GhEx.REST.get(client(__MODULE__.TelErr), "/nope")
+
+      assert_received {:telemetry, [:gh_ex, :request, :stop], _m, meta}
+      assert meta.result == :error
+      assert %GhEx.Error{status: 404} = meta.error
+    end
+  end
 end

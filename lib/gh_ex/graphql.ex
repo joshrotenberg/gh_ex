@@ -46,6 +46,23 @@ defmodule GhEx.GraphQL do
       |> Enum.to_list()
 
   A failed page raises `GhEx.Error`.
+
+  ## Telemetry
+
+  Every `query/3` call (and each `stream/4` page) is wrapped in
+  `:telemetry.span/3`, emitting its own event family separate from REST so the
+  two transports can be metered independently:
+
+    * `[:gh_ex, :graphql, :start]` - measurements `%{system_time, monotonic_time}`,
+      metadata `%{operation: :graphql}`.
+    * `[:gh_ex, :graphql, :stop]` - measurements `%{duration, monotonic_time}`,
+      metadata `%{operation, result}` plus, on success, `status`, the
+      `rate_limit` snapshot, and the GraphQL `cost` (the `rateLimit` block when
+      the query selects it), or, on a 200-with-errors/transport failure,
+      `error`.
+    * `[:gh_ex, :graphql, :exception]` - emitted only if the call raises
+      unexpectedly; measurements `%{duration, monotonic_time}`, metadata
+      `%{operation, kind, reason, stacktrace}`.
   """
 
   alias GhEx.{Auth, Client, Error, RateLimit, Request}
@@ -59,14 +76,30 @@ defmodule GhEx.GraphQL do
   @spec query(Client.t(), String.t(), keyword() | map()) :: result()
   def query(client, query, variables \\ []) do
     body = %{query: query, variables: Map.new(variables)}
+    start_metadata = %{operation: :graphql}
 
-    with {:ok, client} <- Auth.resolve(client) do
-      client
-      |> Request.build_graphql(body)
-      |> Req.request()
-      |> handle()
-    end
+    :telemetry.span([:gh_ex, :graphql], start_metadata, fn ->
+      result =
+        with {:ok, client} <- Auth.resolve(client) do
+          client
+          |> Request.build_graphql(body)
+          |> Req.request()
+          |> handle()
+        end
+
+      {result, Map.merge(start_metadata, stop_metadata(result))}
+    end)
   end
+
+  # GraphQL gets its own `[:gh_ex, :graphql, ...]` event family rather than
+  # sharing `[:gh_ex, :request]`, so consumers can meter the two transports
+  # separately and the `:stop` metadata can carry the GraphQL `cost` snapshot
+  # that REST has no analogue for. `stream/4` pages through `query/3`, so it is
+  # instrumented for free. The result tuple is returned unchanged.
+  defp stop_metadata({:ok, _data, meta}),
+    do: %{result: :ok, status: meta.status, rate_limit: meta.rate_limit, cost: meta.cost}
+
+  defp stop_metadata({:error, reason}), do: %{result: :error, error: reason}
 
   @doc """
   Streams the nodes of a cursor-paginated connection.

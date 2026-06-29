@@ -47,6 +47,11 @@ defmodule GhEx.JWTTest do
     assert {:error, {:invalid_lifetime, 700}} = GhEx.JWT.mint("app", pem, lifetime: 700)
   end
 
+  test "rejects a non-positive :lifetime that would mint an already-expired JWT", %{pem: pem} do
+    assert {:error, {:invalid_lifetime, 0}} = GhEx.JWT.mint("app", pem, lifetime: 0)
+    assert {:error, {:invalid_lifetime, -5}} = GhEx.JWT.mint("app", pem, lifetime: -5)
+  end
+
   test "returns {:error, :invalid_pem} on a malformed PEM" do
     assert {:error, :invalid_pem} = GhEx.JWT.mint("app", "-----BEGIN nonsense-----")
   end

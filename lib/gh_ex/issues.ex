@@ -22,6 +22,15 @@ defmodule GhEx.Issues do
     REST.get(client, "/repos/#{owner}/#{repo}/issues", opts)
   end
 
+  @doc """
+  Auto-paginates issues in a repository into a lazy `Stream` of individual
+  issues, following `Link: rel="next"` (see `GhEx.REST.stream/3`).
+  """
+  @spec stream(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/issues", opts)
+  end
+
   @doc "Gets a single issue by number."
   @spec get(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
   def get(client, owner, repo, number, opts \\ []) do
@@ -50,6 +59,13 @@ defmodule GhEx.Issues do
           REST.result()
   def list_comments(client, owner, repo, number, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/issues/#{number}/comments", opts)
+  end
+
+  @doc "Auto-paginates the comments on an issue into a lazy `Stream`."
+  @spec stream_comments(Client.t(), String.t(), String.t(), number_ref(), keyword()) ::
+          Enumerable.t()
+  def stream_comments(client, owner, repo, number, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/issues/#{number}/comments", opts)
   end
 
   @doc "Adds a comment to an issue."

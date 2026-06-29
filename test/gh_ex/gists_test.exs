@@ -62,4 +62,15 @@ defmodule GhEx.GistsTest do
     assert {:ok, _body, meta} = GhEx.Gists.delete(client(__MODULE__.Delete), "abc123")
     assert meta.status == 204
   end
+
+  test "stream/2 auto-paginates the user's gists" do
+    Req.Test.stub(__MODULE__.Stream, fn conn ->
+      assert conn.request_path == "/gists"
+      Req.Test.json(conn, [%{"id" => "abc"}])
+    end)
+
+    assert client(__MODULE__.Stream) |> GhEx.Gists.stream() |> Enum.to_list() == [
+             %{"id" => "abc"}
+           ]
+  end
 end

@@ -81,6 +81,16 @@ defmodule GhEx.REST do
   never re-applied to an unauthorized host. A non-default GitHub Enterprise
   `rest_url` paginates normally, since its pages stay on the same origin.
 
+  ## Options
+
+    * `:items` - the key under which an object-wrapped response holds its array,
+      for the endpoints that return `%{"total_count" => _, "items" => [...]}`
+      rather than a bare array (Search `"items"`, Actions runs `"workflow_runs"`,
+      Checks `"check_runs"`, and so on). When set, each page's items are taken
+      from `body[items]` and flattened. Omit it for plain-array endpoints, which
+      paginate unchanged. Any other option is forwarded to `Req` for the first
+      page.
+
       client
       |> GhEx.REST.stream("/repos/elixir-lang/elixir/issues", params: [state: "all", per_page: 100])
       |> Stream.map(& &1["number"])
@@ -88,6 +98,8 @@ defmodule GhEx.REST do
   """
   @spec stream(Client.t(), String.t(), keyword()) :: Enumerable.t()
   def stream(client, path, opts \\ []) do
+    {items_key, opts} = Keyword.pop(opts, :items)
+
     Stream.resource(
       fn -> {:first, path, opts} end,
       fn
@@ -95,7 +107,7 @@ defmodule GhEx.REST do
           {:halt, nil}
 
         {:first, path, opts} ->
-          emit(request(client, :get, path, opts))
+          emit(request(client, :get, path, opts), items_key)
 
         {:next, url} ->
           unless same_origin?(url, client.rest_url) do
@@ -104,7 +116,7 @@ defmodule GhEx.REST do
             }
           end
 
-          emit(request(client, :get, url, []))
+          emit(request(client, :get, url, []), items_key)
       end,
       fn _ -> :ok end
     )
@@ -121,15 +133,24 @@ defmodule GhEx.REST do
     a.scheme == b.scheme and a.host == b.host and a.port == b.port
   end
 
-  defp emit({:ok, body, meta}) when is_list(body) do
-    case meta.links["next"] do
-      nil -> {body, :halt}
-      url -> {body, {:next, url}}
+  defp emit({:ok, body, meta}, nil) when is_list(body), do: paginate(body, meta)
+
+  defp emit({:ok, body, meta}, items_key) when is_map(body) and is_binary(items_key) do
+    case Map.fetch(body, items_key) do
+      {:ok, items} when is_list(items) -> paginate(items, meta)
+      _ -> {[body], :halt}
     end
   end
 
-  defp emit({:ok, body, _meta}), do: {[body], :halt}
-  defp emit({:error, reason}), do: raise(reason)
+  defp emit({:ok, body, _meta}, _items_key), do: {[body], :halt}
+  defp emit({:error, reason}, _items_key), do: raise(reason)
+
+  defp paginate(items, meta) do
+    case meta.links["next"] do
+      nil -> {items, :halt}
+      url -> {items, {:next, url}}
+    end
+  end
 
   defp request(client, method, path, opts) do
     with {:ok, client} <- Auth.resolve(client) do

@@ -51,4 +51,25 @@ defmodule GhEx.TeamsTest do
     assert {:ok, [%{"login" => "alice"}], _} =
              GhEx.Teams.list_members(client(__MODULE__.Members), "acme", "eng")
   end
+
+  test "stream/3 auto-paginates org teams" do
+    Req.Test.stub(__MODULE__.Stream, fn conn ->
+      assert conn.request_path == "/orgs/acme/teams"
+      Req.Test.json(conn, [%{"slug" => "eng"}])
+    end)
+
+    assert client(__MODULE__.Stream) |> GhEx.Teams.stream("acme") |> Enum.to_list() ==
+             [%{"slug" => "eng"}]
+  end
+
+  test "stream_members/4 auto-paginates team members" do
+    Req.Test.stub(__MODULE__.StreamMembers, fn conn ->
+      assert conn.request_path == "/orgs/acme/teams/eng/members"
+      Req.Test.json(conn, [%{"login" => "alice"}])
+    end)
+
+    assert client(__MODULE__.StreamMembers)
+           |> GhEx.Teams.stream_members("acme", "eng")
+           |> Enum.to_list() == [%{"login" => "alice"}]
+  end
 end

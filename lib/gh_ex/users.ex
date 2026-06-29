@@ -26,15 +26,33 @@ defmodule GhEx.Users do
     REST.get(client, "/users/#{username}/followers", opts)
   end
 
+  @doc "Auto-paginates a user's followers into a lazy `Stream` (see `GhEx.REST.stream/3`)."
+  @spec stream_followers(Client.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_followers(client, username, opts \\ []) do
+    REST.stream(client, "/users/#{username}/followers", opts)
+  end
+
   @doc "Lists users followed by a user."
   @spec list_following(Client.t(), String.t(), keyword()) :: REST.result()
   def list_following(client, username, opts \\ []) do
     REST.get(client, "/users/#{username}/following", opts)
   end
 
+  @doc "Auto-paginates the users a user follows into a lazy `Stream`."
+  @spec stream_following(Client.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_following(client, username, opts \\ []) do
+    REST.stream(client, "/users/#{username}/following", opts)
+  end
+
   @doc "Lists email addresses for the authenticated user."
   @spec list_emails(Client.t(), keyword()) :: REST.result()
   def list_emails(client, opts \\ []) do
     REST.get(client, "/user/emails", opts)
+  end
+
+  @doc "Auto-paginates the authenticated user's email addresses into a lazy `Stream`."
+  @spec stream_emails(Client.t(), keyword()) :: Enumerable.t()
+  def stream_emails(client, opts \\ []) do
+    REST.stream(client, "/user/emails", opts)
   end
 end

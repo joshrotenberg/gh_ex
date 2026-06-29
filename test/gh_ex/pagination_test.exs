@@ -118,6 +118,58 @@ defmodule GhEx.PaginationTest do
     assert items == [%{"n" => 1}, %{"n" => 2}]
   end
 
+  test "stream/3 with :items unwraps an object-wrapped array and follows rel=next" do
+    stub = __MODULE__.Wrapped
+
+    Req.Test.stub(stub, fn conn ->
+      case conn.query_string do
+        "page=2" ->
+          Req.Test.json(conn, %{"total_count" => 4, "items" => [%{"n" => 3}, %{"n" => 4}]})
+
+        _ ->
+          conn
+          |> Plug.Conn.put_resp_header("link", ~s(<#{page_two_url(conn)}>; rel="next"))
+          |> Req.Test.json(%{"total_count" => 4, "items" => [%{"n" => 1}, %{"n" => 2}]})
+      end
+    end)
+
+    client = GhEx.new(req_options: [plug: {Req.Test, stub}])
+
+    items =
+      client
+      |> GhEx.REST.stream("/search/things", items: "items")
+      |> Enum.to_list()
+
+    assert items == [%{"n" => 1}, %{"n" => 2}, %{"n" => 3}, %{"n" => 4}]
+  end
+
+  test "stream/3 with :items emits the body as a singleton when the key is absent" do
+    stub = __MODULE__.WrappedMissingKey
+
+    Req.Test.stub(stub, fn conn ->
+      Req.Test.json(conn, %{"total_count" => 0})
+    end)
+
+    client = GhEx.new(req_options: [plug: {Req.Test, stub}])
+
+    assert client |> GhEx.REST.stream("/search/things", items: "items") |> Enum.to_list() ==
+             [%{"total_count" => 0}]
+  end
+
+  test "stream/3 does not forward :items to Req as a query param" do
+    stub = __MODULE__.ItemsNotLeaked
+
+    Req.Test.stub(stub, fn conn ->
+      assert conn.query_string == ""
+      Req.Test.json(conn, %{"items" => [%{"n" => 1}]})
+    end)
+
+    client = GhEx.new(req_options: [plug: {Req.Test, stub}])
+
+    assert client |> GhEx.REST.stream("/search/things", items: "items") |> Enum.to_list() ==
+             [%{"n" => 1}]
+  end
+
   defp page_two_url(conn) do
     "#{conn.scheme}://#{conn.host}#{conn.request_path}?page=2"
   end

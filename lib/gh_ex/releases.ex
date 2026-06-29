@@ -16,6 +16,12 @@ defmodule GhEx.Releases do
     REST.get(client, "/repos/#{owner}/#{repo}/releases", opts)
   end
 
+  @doc "Auto-paginates a repository's releases into a lazy `Stream` (see `GhEx.REST.stream/3`)."
+  @spec stream(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/releases", opts)
+  end
+
   @doc "Gets a release by id."
   @spec get(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
   def get(client, owner, repo, id, opts \\ []) do

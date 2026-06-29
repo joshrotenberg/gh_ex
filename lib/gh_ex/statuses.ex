@@ -20,6 +20,13 @@ defmodule GhEx.Statuses do
     REST.get(client, "/repos/#{owner}/#{repo}/commits/#{ref}/statuses", opts)
   end
 
+  @doc "Auto-paginates the statuses for a git ref into a lazy `Stream` (see `GhEx.REST.stream/3`)."
+  @spec stream_for_ref(Client.t(), String.t(), String.t(), String.t(), keyword()) ::
+          Enumerable.t()
+  def stream_for_ref(client, owner, repo, ref, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/commits/#{ref}/statuses", opts)
+  end
+
   @doc "Gets the combined status for a git ref."
   @spec get_combined(Client.t(), String.t(), String.t(), String.t(), keyword()) :: REST.result()
   def get_combined(client, owner, repo, ref, opts \\ []) do

@@ -53,4 +53,26 @@ defmodule GhEx.OrganizationsTest do
     assert {:ok, [%{"login" => "alice"}], _} =
              GhEx.Organizations.list_members(client(__MODULE__.Members), "acme")
   end
+
+  test "stream_for_authenticated_user/2 auto-paginates the user's orgs" do
+    Req.Test.stub(__MODULE__.StreamOrgs, fn conn ->
+      assert conn.request_path == "/user/orgs"
+      Req.Test.json(conn, [%{"login" => "acme"}])
+    end)
+
+    assert client(__MODULE__.StreamOrgs)
+           |> GhEx.Organizations.stream_for_authenticated_user()
+           |> Enum.to_list() == [%{"login" => "acme"}]
+  end
+
+  test "stream_members/3 auto-paginates org members" do
+    Req.Test.stub(__MODULE__.StreamMembers, fn conn ->
+      assert conn.request_path == "/orgs/acme/members"
+      Req.Test.json(conn, [%{"login" => "alice"}])
+    end)
+
+    assert client(__MODULE__.StreamMembers)
+           |> GhEx.Organizations.stream_members("acme")
+           |> Enum.to_list() == [%{"login" => "alice"}]
+  end
 end

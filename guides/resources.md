@@ -3,8 +3,12 @@
 The convenience modules are thin wrappers over `GhEx.REST` that fill in the
 endpoint path. Each function returns the same `{:ok, body, meta}` /
 `{:error, reason}` shape as the core and passes `opts` through to `Req` (so
-`:params`, `:json`, headers, and a `Req.Test` plug all work). They cover the
+`:params`, headers, and a `Req.Test` plug all work). They cover the
 common paths; for anything else, call `GhEx.REST` directly.
+
+On the write wrappers (`create`, `update`, `merge`, and the like), the `attrs`
+argument is the sole request body: each sets `:json` to `attrs`, so a `:json`
+passed in `opts` is ignored.
 
 The `list_*` functions return a single page. Each has a `stream_*` companion
 that auto-paginates into a lazy `Stream` of individual items, following

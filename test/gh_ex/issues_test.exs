@@ -43,6 +43,22 @@ defmodule GhEx.IssuesTest do
              GhEx.Issues.create(client(__MODULE__.Create), "o", "r", %{title: "Bug"})
   end
 
+  test "create/4 sends attrs as the body, ignoring a :json in opts" do
+    Req.Test.stub(__MODULE__.JsonIgnored, fn conn ->
+      assert body(conn) == %{"title" => "Bug"}
+      conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"number" => 7})
+    end)
+
+    assert {:ok, %{"number" => 7}, _} =
+             GhEx.Issues.create(
+               client(__MODULE__.JsonIgnored),
+               "o",
+               "r",
+               %{title: "Bug"},
+               json: %{title: "caller override"}
+             )
+  end
+
   test "update/5 PATCHes the issue" do
     Req.Test.stub(__MODULE__.Update, fn conn ->
       assert conn.method == "PATCH"

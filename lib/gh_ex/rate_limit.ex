@@ -101,6 +101,14 @@ defmodule GhEx.RateLimit do
     end
   end
 
+  # Req's `:retry` response step runs before `:decode_body`, so at retry time the
+  # body is still the raw JSON string, not a decoded map: match the string (the
+  # production case). The map clause covers an already-decoded body, e.g. when a
+  # caller reorders steps or pre-decodes.
+  defp secondary_rate_limit?(%Req.Response{body: body}) when is_binary(body) do
+    String.contains?(String.downcase(body), "secondary rate limit")
+  end
+
   defp secondary_rate_limit?(%Req.Response{body: %{"message" => message}})
        when is_binary(message) do
     String.contains?(String.downcase(message), "secondary rate limit")

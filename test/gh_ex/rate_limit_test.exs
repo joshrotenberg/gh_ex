@@ -26,22 +26,32 @@ defmodule GhEx.RateLimitTest do
       assert ms > 0 and ms <= 30_000
     end
 
+    # The :retry step runs before :decode_body, so in production the body is the
+    # raw JSON string, not a map. These use a string body to match that; see the
+    # end-to-end pipeline test in rest_test.exs.
     test "delays a body-only secondary rate limit 403 by the recommended minimum" do
-      body = %{"message" => "You have exceeded a secondary rate limit. Please wait."}
+      body = ~s({"message":"You have exceeded a secondary rate limit. Please wait."})
 
       assert {:delay, 60_000} =
                GhEx.RateLimit.retry(%Req.Request{}, resp(403, %{}, body))
     end
 
     test "secondary rate limit detection is case-insensitive" do
-      body = %{"message" => "You have exceeded a SECONDARY RATE LIMIT."}
+      body = ~s({"message":"You have exceeded a SECONDARY RATE LIMIT."})
+
+      assert {:delay, 60_000} =
+               GhEx.RateLimit.retry(%Req.Request{}, resp(403, %{}, body))
+    end
+
+    test "also detects an already-decoded (map) body" do
+      body = %{"message" => "You have exceeded a secondary rate limit."}
 
       assert {:delay, 60_000} =
                GhEx.RateLimit.retry(%Req.Request{}, resp(403, %{}, body))
     end
 
     test "retry-after takes precedence over the secondary rate limit body" do
-      body = %{"message" => "You have exceeded a secondary rate limit."}
+      body = ~s({"message":"You have exceeded a secondary rate limit."})
 
       assert {:delay, 5000} =
                GhEx.RateLimit.retry(%Req.Request{}, resp(403, %{"retry-after" => ["5"]}, body))
@@ -53,7 +63,7 @@ defmodule GhEx.RateLimitTest do
     end
 
     test "does not treat an unrelated 403 body message as a rate limit" do
-      body = %{"message" => "Resource not accessible by integration"}
+      body = ~s({"message":"Resource not accessible by integration"})
       assert GhEx.RateLimit.retry(%Req.Request{}, resp(403, %{}, body)) == false
     end
 

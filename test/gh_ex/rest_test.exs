@@ -237,14 +237,17 @@ defmodule GhEx.RESTTest do
         |> Req.Test.json(%{"ok" => true})
       end)
 
-      assert {:ok, _body, _meta} = GhEx.REST.get(client(__MODULE__.TelOK), "/ok")
+      assert {:ok, _body, _meta} = GhEx.REST.get(client(__MODULE__.TelOK), "/tel-ok")
 
       assert_received {:telemetry, [:gh_ex, :request, :start], start_m,
-                       %{method: :get, path: "/ok"}}
+                       %{method: :get, path: "/tel-ok"}}
 
       assert is_integer(start_m.system_time)
 
-      assert_received {:telemetry, [:gh_ex, :request, :stop], stop_m, meta}
+      # Match this test's own request by its unique path: the handler is global,
+      # so in an async run it also receives request events from other modules.
+      assert_received {:telemetry, [:gh_ex, :request, :stop], stop_m, %{path: "/tel-ok"} = meta}
+
       assert is_integer(stop_m.duration)
       assert meta.result == :ok
       assert meta.status == 200
@@ -256,9 +259,9 @@ defmodule GhEx.RESTTest do
         conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"message" => "Not Found"})
       end)
 
-      assert {:error, %GhEx.Error{}} = GhEx.REST.get(client(__MODULE__.TelErr), "/nope")
+      assert {:error, %GhEx.Error{}} = GhEx.REST.get(client(__MODULE__.TelErr), "/tel-err")
 
-      assert_received {:telemetry, [:gh_ex, :request, :stop], _m, meta}
+      assert_received {:telemetry, [:gh_ex, :request, :stop], _m, %{path: "/tel-err"} = meta}
       assert meta.result == :error
       assert %GhEx.Error{status: 404} = meta.error
     end

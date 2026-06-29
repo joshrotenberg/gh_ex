@@ -178,6 +178,34 @@ defmodule GhEx.RESTTest do
 
       assert {:error, %GhEx.Error{status: 403}} = GhEx.REST.get(client, "/x")
     end
+
+    # Regression: Req runs the :retry step before :decode_body, so the retry
+    # function sees the raw (binary) body, not a decoded map. A body-only
+    # secondary rate limit (no retry-after, remaining not 0) must still be
+    # detected end-to-end. A spy captures the verdict on the real response and
+    # returns false, so the test asserts the contract without sleeping 60s.
+    test "detects a body-only secondary rate limit through the real Req pipeline" do
+      test = self()
+
+      Req.Test.stub(__MODULE__.SecondaryBody, fn conn ->
+        conn
+        |> Plug.Conn.put_status(403)
+        |> Req.Test.json(%{"message" => "You have exceeded a secondary rate limit. Please wait."})
+      end)
+
+      spy = fn request, response ->
+        send(test, {:verdict, GhEx.RateLimit.retry(request, response), response.body})
+        false
+      end
+
+      client = GhEx.new(req_options: [plug: {Req.Test, __MODULE__.SecondaryBody}, retry: spy])
+
+      GhEx.REST.get(client, "/x")
+
+      assert_received {:verdict, verdict, body}
+      assert is_binary(body), "the :retry step runs before :decode_body, so body is raw"
+      assert verdict == {:delay, 60_000}
+    end
   end
 
   describe "raw/4" do

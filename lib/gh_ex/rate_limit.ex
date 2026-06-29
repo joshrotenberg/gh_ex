@@ -49,12 +49,20 @@ defmodule GhEx.RateLimit do
     end
   end
 
+  # GitHub recommends waiting at least 60s before retrying a secondary rate
+  # limit that arrives without a `retry-after` header.
+  @secondary_delay_ms 60_000
+
   @doc """
   A `Req`-compatible retry policy that understands GitHub's rate limits.
 
   Returns `{:delay, ms}` for a `403` or `429` that signals a rate limit, waiting
   the `retry-after` header or, when `x-ratelimit-remaining` is `0`, until
-  `x-ratelimit-reset`. Other `429`s and the usual transient statuses
+  `x-ratelimit-reset`. GitHub's secondary rate limit can arrive as a `403` whose
+  only signal is the body message "You have exceeded a secondary rate limit"; in
+  that case (no `retry-after`, `x-ratelimit-remaining` not `0`) the body is
+  inspected and a bounded `{:delay, #{@secondary_delay_ms}}` is returned, the
+  minimum GitHub recommends. Other `429`s and the usual transient statuses
   (`408`, `500`, `502`, `503`, `504`) return `true` so `Req` applies its own
   backoff. A plain `403` (an authorization failure, not a rate limit) is not
   retried. Wire it in through `:req_options`; `Req` applies `:max_retries`.
@@ -85,10 +93,28 @@ defmodule GhEx.RateLimit do
           reset -> max(0, reset - System.system_time(:second)) * 1000
         end
 
+      secondary_rate_limit?(resp) ->
+        @secondary_delay_ms
+
       true ->
         nil
     end
   end
+
+  # Req's `:retry` response step runs before `:decode_body`, so at retry time the
+  # body is still the raw JSON string, not a decoded map: match the string (the
+  # production case). The map clause covers an already-decoded body, e.g. when a
+  # caller reorders steps or pre-decodes.
+  defp secondary_rate_limit?(%Req.Response{body: body}) when is_binary(body) do
+    String.contains?(String.downcase(body), "secondary rate limit")
+  end
+
+  defp secondary_rate_limit?(%Req.Response{body: %{"message" => message}})
+       when is_binary(message) do
+    String.contains?(String.downcase(message), "secondary rate limit")
+  end
+
+  defp secondary_rate_limit?(_resp), do: false
 
   @doc """
   Fetches rate-limit status from `GET /rate_limit`.

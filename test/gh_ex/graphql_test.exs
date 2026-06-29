@@ -186,6 +186,26 @@ defmodule GhEx.GraphQLTest do
       assert Agent.get(counter, & &1) == 1
     end
 
+    test "halts cleanly when :path traverses a list instead of raising ArgumentError" do
+      Req.Test.stub(__MODULE__.ListPath, fn conn ->
+        Req.Test.json(conn, %{
+          "data" => %{"organization" => %{"nodes" => [%{"title" => "A"}]}}
+        })
+      end)
+
+      titles =
+        client(__MODULE__.ListPath)
+        |> GhEx.GraphQL.stream(
+          "query($org: String!, $cursor: String) { ... }",
+          [org: "joshrotenberg"],
+          path: ["organization", "nodes", "projectsV2"]
+        )
+        |> Stream.map(& &1["title"])
+        |> Enum.to_list()
+
+      assert titles == []
+    end
+
     test "raises GhEx.Error when a page returns GraphQL errors" do
       Req.Test.stub(__MODULE__.StreamErr, fn conn ->
         Req.Test.json(conn, %{"data" => nil, "errors" => [%{"message" => "boom"}]})

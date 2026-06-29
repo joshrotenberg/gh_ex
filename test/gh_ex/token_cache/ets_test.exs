@@ -116,6 +116,18 @@ defmodule GhEx.TokenCache.ETSTest do
     assert {:ok, %{token: "ok"}} = ETS.fetch(cache, :k, fn -> {:ok, value("ok", 3600)} end)
   end
 
+  test "the table is :public, so any process can read a cached token directly", %{cache: cache} do
+    assert {:ok, %{token: "fresh"}} = ETS.fetch(cache, :k, fn -> {:ok, value("fresh", 3600)} end)
+
+    # Documented trust boundary: a process other than the owning GenServer can read
+    # the cached value straight from the named, public table (see the moduledoc).
+    read =
+      Task.async(fn -> :ets.lookup(cache, :k) end)
+      |> Task.await()
+
+    assert [{:k, %{token: "fresh"}}] = read
+  end
+
   test "multiple named caches coexist under one supervisor" do
     {:ok, sup} =
       Supervisor.start_link(

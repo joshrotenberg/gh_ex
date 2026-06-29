@@ -22,6 +22,15 @@ defmodule GhEx.PullRequests do
     REST.get(client, "/repos/#{owner}/#{repo}/pulls", opts)
   end
 
+  @doc """
+  Auto-paginates pull requests in a repository into a lazy `Stream` of
+  individual pull requests (see `GhEx.REST.stream/3`).
+  """
+  @spec stream(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/pulls", opts)
+  end
+
   @doc "Gets a single pull request by number."
   @spec get(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
   def get(client, owner, repo, number, opts \\ []) do
@@ -60,10 +69,24 @@ defmodule GhEx.PullRequests do
     REST.get(client, "/repos/#{owner}/#{repo}/pulls/#{number}/files", opts)
   end
 
+  @doc "Auto-paginates the files changed in a pull request into a lazy `Stream`."
+  @spec stream_files(Client.t(), String.t(), String.t(), number_ref(), keyword()) ::
+          Enumerable.t()
+  def stream_files(client, owner, repo, number, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/pulls/#{number}/files", opts)
+  end
+
   @doc "Lists the reviews on a pull request."
   @spec list_reviews(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
   def list_reviews(client, owner, repo, number, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/pulls/#{number}/reviews", opts)
+  end
+
+  @doc "Auto-paginates the reviews on a pull request into a lazy `Stream`."
+  @spec stream_reviews(Client.t(), String.t(), String.t(), number_ref(), keyword()) ::
+          Enumerable.t()
+  def stream_reviews(client, owner, repo, number, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/pulls/#{number}/reviews", opts)
   end
 
   @doc "Creates a review on a pull request. `attrs` sets `event` (APPROVE, REQUEST_CHANGES, COMMENT), `body`, `comments`."

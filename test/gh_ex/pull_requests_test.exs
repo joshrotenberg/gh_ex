@@ -117,4 +117,36 @@ defmodule GhEx.PullRequestsTest do
                event: "APPROVE"
              })
   end
+
+  test "stream/3 auto-paginates repo pull requests" do
+    Req.Test.stub(__MODULE__.Stream, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls"
+      Req.Test.json(conn, [%{"number" => 1}])
+    end)
+
+    assert client(__MODULE__.Stream) |> GhEx.PullRequests.stream("o", "r") |> Enum.to_list() ==
+             [%{"number" => 1}]
+  end
+
+  test "stream_files/4 auto-paginates pull request files" do
+    Req.Test.stub(__MODULE__.StreamFiles, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/42/files"
+      Req.Test.json(conn, [%{"filename" => "a.ex"}])
+    end)
+
+    assert client(__MODULE__.StreamFiles)
+           |> GhEx.PullRequests.stream_files("o", "r", 42)
+           |> Enum.to_list() == [%{"filename" => "a.ex"}]
+  end
+
+  test "stream_reviews/4 auto-paginates pull request reviews" do
+    Req.Test.stub(__MODULE__.StreamReviews, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/42/reviews"
+      Req.Test.json(conn, [%{"id" => 1}])
+    end)
+
+    assert client(__MODULE__.StreamReviews)
+           |> GhEx.PullRequests.stream_reviews("o", "r", 42)
+           |> Enum.to_list() == [%{"id" => 1}]
+  end
 end

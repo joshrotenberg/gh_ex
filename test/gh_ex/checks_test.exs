@@ -58,4 +58,15 @@ defmodule GhEx.ChecksTest do
     assert {:ok, %{"check_runs" => []}, _} =
              GhEx.Checks.list_for_ref(client(__MODULE__.ListForRef), "o", "r", "main")
   end
+
+  test "stream_for_ref/5 unwraps the check_runs array" do
+    Req.Test.stub(__MODULE__.StreamForRef, fn conn ->
+      assert conn.request_path == "/repos/o/r/commits/main/check-runs"
+      Req.Test.json(conn, %{"total_count" => 1, "check_runs" => [%{"id" => 1}]})
+    end)
+
+    assert client(__MODULE__.StreamForRef)
+           |> GhEx.Checks.stream_for_ref("o", "r", "main")
+           |> Enum.to_list() == [%{"id" => 1}]
+  end
 end

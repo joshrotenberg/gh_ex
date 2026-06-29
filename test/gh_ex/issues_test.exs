@@ -88,4 +88,25 @@ defmodule GhEx.IssuesTest do
     assert {:ok, _labels, _} =
              GhEx.Issues.add_labels(client(__MODULE__.Labels), "o", "r", 7, ["bug", "p1"])
   end
+
+  test "stream/3 auto-paginates repo issues" do
+    Req.Test.stub(__MODULE__.Stream, fn conn ->
+      assert conn.request_path == "/repos/o/r/issues"
+      Req.Test.json(conn, [%{"number" => 1}, %{"number" => 2}])
+    end)
+
+    assert client(__MODULE__.Stream) |> GhEx.Issues.stream("o", "r") |> Enum.to_list() ==
+             [%{"number" => 1}, %{"number" => 2}]
+  end
+
+  test "stream_comments/4 auto-paginates issue comments" do
+    Req.Test.stub(__MODULE__.StreamComments, fn conn ->
+      assert conn.request_path == "/repos/o/r/issues/7/comments"
+      Req.Test.json(conn, [%{"id" => 1}])
+    end)
+
+    assert client(__MODULE__.StreamComments)
+           |> GhEx.Issues.stream_comments("o", "r", 7)
+           |> Enum.to_list() == [%{"id" => 1}]
+  end
 end

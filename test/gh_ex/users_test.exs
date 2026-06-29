@@ -54,4 +54,37 @@ defmodule GhEx.UsersTest do
     assert {:ok, [%{"email" => "me@example.com"}], _} =
              GhEx.Users.list_emails(client(__MODULE__.Emails))
   end
+
+  test "stream_followers/3 auto-paginates a user's followers" do
+    Req.Test.stub(__MODULE__.StreamFollowers, fn conn ->
+      assert conn.request_path == "/users/josh/followers"
+      Req.Test.json(conn, [%{"login" => "alice"}])
+    end)
+
+    assert client(__MODULE__.StreamFollowers)
+           |> GhEx.Users.stream_followers("josh")
+           |> Enum.to_list() == [%{"login" => "alice"}]
+  end
+
+  test "stream_following/3 auto-paginates who a user follows" do
+    Req.Test.stub(__MODULE__.StreamFollowing, fn conn ->
+      assert conn.request_path == "/users/josh/following"
+      Req.Test.json(conn, [%{"login" => "bob"}])
+    end)
+
+    assert client(__MODULE__.StreamFollowing)
+           |> GhEx.Users.stream_following("josh")
+           |> Enum.to_list() == [%{"login" => "bob"}]
+  end
+
+  test "stream_emails/2 auto-paginates the authenticated user's emails" do
+    Req.Test.stub(__MODULE__.StreamEmails, fn conn ->
+      assert conn.request_path == "/user/emails"
+      Req.Test.json(conn, [%{"email" => "me@example.com"}])
+    end)
+
+    assert client(__MODULE__.StreamEmails)
+           |> GhEx.Users.stream_emails()
+           |> Enum.to_list() == [%{"email" => "me@example.com"}]
+  end
 end

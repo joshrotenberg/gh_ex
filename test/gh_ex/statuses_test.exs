@@ -43,4 +43,15 @@ defmodule GhEx.StatusesTest do
     assert {:ok, %{"state" => "success"}, _} =
              GhEx.Statuses.get_combined(client(__MODULE__.GetCombined), "o", "r", "main")
   end
+
+  test "stream_for_ref/5 auto-paginates statuses for a ref" do
+    Req.Test.stub(__MODULE__.StreamForRef, fn conn ->
+      assert conn.request_path == "/repos/o/r/commits/main/statuses"
+      Req.Test.json(conn, [%{"state" => "success"}])
+    end)
+
+    assert client(__MODULE__.StreamForRef)
+           |> GhEx.Statuses.stream_for_ref("o", "r", "main")
+           |> Enum.to_list() == [%{"state" => "success"}]
+  end
 end

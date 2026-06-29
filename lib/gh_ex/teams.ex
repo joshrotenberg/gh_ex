@@ -14,6 +14,12 @@ defmodule GhEx.Teams do
     REST.get(client, "/orgs/#{org}/teams", opts)
   end
 
+  @doc "Auto-paginates an organization's teams into a lazy `Stream` (see `GhEx.REST.stream/3`)."
+  @spec stream(Client.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream(client, org, opts \\ []) do
+    REST.stream(client, "/orgs/#{org}/teams", opts)
+  end
+
   @doc "Gets a team by slug."
   @spec get_by_slug(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
   def get_by_slug(client, org, slug, opts \\ []) do
@@ -30,5 +36,11 @@ defmodule GhEx.Teams do
   @spec list_members(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
   def list_members(client, org, slug, opts \\ []) do
     REST.get(client, "/orgs/#{org}/teams/#{slug}/members", opts)
+  end
+
+  @doc "Auto-paginates a team's members into a lazy `Stream`."
+  @spec stream_members(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_members(client, org, slug, opts \\ []) do
+    REST.stream(client, "/orgs/#{org}/teams/#{slug}/members", opts)
   end
 end

@@ -96,4 +96,48 @@ defmodule GhEx.RepositoriesTest do
     assert {:ok, [%{"name" => "main"}], _} =
              GhEx.Repositories.list_branches(client(__MODULE__.Branches), "o", "r")
   end
+
+  test "stream_for_org/3 auto-paginates org repositories" do
+    Req.Test.stub(__MODULE__.StreamOrg, fn conn ->
+      assert conn.request_path == "/orgs/acme/repos"
+      Req.Test.json(conn, [%{"name" => "a"}])
+    end)
+
+    assert client(__MODULE__.StreamOrg)
+           |> GhEx.Repositories.stream_for_org("acme")
+           |> Enum.to_list() == [%{"name" => "a"}]
+  end
+
+  test "stream_for_user/3 auto-paginates user repositories" do
+    Req.Test.stub(__MODULE__.StreamUser, fn conn ->
+      assert conn.request_path == "/users/josh/repos"
+      Req.Test.json(conn, [%{"name" => "b"}])
+    end)
+
+    assert client(__MODULE__.StreamUser)
+           |> GhEx.Repositories.stream_for_user("josh")
+           |> Enum.to_list() == [%{"name" => "b"}]
+  end
+
+  test "stream_commits/3 auto-paginates repo commits" do
+    Req.Test.stub(__MODULE__.StreamCommits, fn conn ->
+      assert conn.request_path == "/repos/o/r/commits"
+      Req.Test.json(conn, [%{"sha" => "abc"}])
+    end)
+
+    assert client(__MODULE__.StreamCommits)
+           |> GhEx.Repositories.stream_commits("o", "r")
+           |> Enum.to_list() == [%{"sha" => "abc"}]
+  end
+
+  test "stream_branches/3 auto-paginates repo branches" do
+    Req.Test.stub(__MODULE__.StreamBranches, fn conn ->
+      assert conn.request_path == "/repos/o/r/branches"
+      Req.Test.json(conn, [%{"name" => "main"}])
+    end)
+
+    assert client(__MODULE__.StreamBranches)
+           |> GhEx.Repositories.stream_branches("o", "r")
+           |> Enum.to_list() == [%{"name" => "main"}]
+  end
 end

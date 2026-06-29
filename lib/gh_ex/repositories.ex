@@ -22,10 +22,22 @@ defmodule GhEx.Repositories do
     REST.get(client, "/orgs/#{org}/repos", opts)
   end
 
+  @doc "Auto-paginates an organization's repositories into a lazy `Stream`."
+  @spec stream_for_org(Client.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_for_org(client, org, opts \\ []) do
+    REST.stream(client, "/orgs/#{org}/repos", opts)
+  end
+
   @doc "Lists public repositories for a user."
   @spec list_for_user(Client.t(), String.t(), keyword()) :: REST.result()
   def list_for_user(client, username, opts \\ []) do
     REST.get(client, "/users/#{username}/repos", opts)
+  end
+
+  @doc "Auto-paginates a user's public repositories into a lazy `Stream`."
+  @spec stream_for_user(Client.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_for_user(client, username, opts \\ []) do
+    REST.stream(client, "/users/#{username}/repos", opts)
   end
 
   @doc "Creates a repository in an organization. `attrs` is the JSON body (name, private, ...)."
@@ -52,9 +64,21 @@ defmodule GhEx.Repositories do
     REST.get(client, "/repos/#{owner}/#{repo}/commits", opts)
   end
 
+  @doc "Auto-paginates a repository's commits into a lazy `Stream`."
+  @spec stream_commits(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_commits(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/commits", opts)
+  end
+
   @doc "Lists branches on a repository."
   @spec list_branches(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
   def list_branches(client, owner, repo, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/branches", opts)
+  end
+
+  @doc "Auto-paginates a repository's branches into a lazy `Stream`."
+  @spec stream_branches(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_branches(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/branches", opts)
   end
 end

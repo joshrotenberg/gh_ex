@@ -37,4 +37,18 @@ defmodule GhEx.Checks do
   def list_for_ref(client, owner, repo, ref, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/commits/#{ref}/check-runs", opts)
   end
+
+  @doc """
+  Auto-paginates the check runs for a git ref into a lazy `Stream`, unwrapping
+  the `"check_runs"` array on each page (see `GhEx.REST.stream/3`).
+  """
+  @spec stream_for_ref(Client.t(), String.t(), String.t(), String.t(), keyword()) ::
+          Enumerable.t()
+  def stream_for_ref(client, owner, repo, ref, opts \\ []) do
+    REST.stream(
+      client,
+      "/repos/#{owner}/#{repo}/commits/#{ref}/check-runs",
+      Keyword.put(opts, :items, "check_runs")
+    )
+  end
 end

@@ -82,4 +82,14 @@ defmodule GhEx.ReleasesTest do
     assert {:ok, _body, meta} = GhEx.Releases.delete(client(__MODULE__.Delete), "o", "r", 42)
     assert meta.status == 204
   end
+
+  test "stream/3 auto-paginates repo releases" do
+    Req.Test.stub(__MODULE__.Stream, fn conn ->
+      assert conn.request_path == "/repos/o/r/releases"
+      Req.Test.json(conn, [%{"id" => 1}])
+    end)
+
+    assert client(__MODULE__.Stream) |> GhEx.Releases.stream("o", "r") |> Enum.to_list() ==
+             [%{"id" => 1}]
+  end
 end

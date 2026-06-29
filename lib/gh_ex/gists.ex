@@ -16,6 +16,12 @@ defmodule GhEx.Gists do
     REST.get(client, "/gists", opts)
   end
 
+  @doc "Auto-paginates the authenticated user's gists into a lazy `Stream` (see `GhEx.REST.stream/3`)."
+  @spec stream(Client.t(), keyword()) :: Enumerable.t()
+  def stream(client, opts \\ []) do
+    REST.stream(client, "/gists", opts)
+  end
+
   @doc "Gets a gist by id."
   @spec get(Client.t(), id(), keyword()) :: REST.result()
   def get(client, gist_id, opts \\ []) do

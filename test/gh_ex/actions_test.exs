@@ -100,4 +100,37 @@ defmodule GhEx.ActionsTest do
     assert {:ok, _body, meta} = GhEx.Actions.rerun(client(__MODULE__.Rerun), "o", "r", 9)
     assert meta.status == 201
   end
+
+  test "stream_workflows/3 unwraps the workflows array" do
+    Req.Test.stub(__MODULE__.StreamWorkflows, fn conn ->
+      assert conn.request_path == "/repos/o/r/actions/workflows"
+      Req.Test.json(conn, %{"total_count" => 1, "workflows" => [%{"id" => 1}]})
+    end)
+
+    assert client(__MODULE__.StreamWorkflows)
+           |> GhEx.Actions.stream_workflows("o", "r")
+           |> Enum.to_list() == [%{"id" => 1}]
+  end
+
+  test "stream_runs/3 unwraps the workflow_runs array" do
+    Req.Test.stub(__MODULE__.StreamRuns, fn conn ->
+      assert conn.request_path == "/repos/o/r/actions/runs"
+      Req.Test.json(conn, %{"total_count" => 1, "workflow_runs" => [%{"id" => 7}]})
+    end)
+
+    assert client(__MODULE__.StreamRuns)
+           |> GhEx.Actions.stream_runs("o", "r")
+           |> Enum.to_list() == [%{"id" => 7}]
+  end
+
+  test "stream_run_jobs/4 unwraps the jobs array" do
+    Req.Test.stub(__MODULE__.StreamRunJobs, fn conn ->
+      assert conn.request_path == "/repos/o/r/actions/runs/9/jobs"
+      Req.Test.json(conn, %{"total_count" => 1, "jobs" => [%{"id" => 3}]})
+    end)
+
+    assert client(__MODULE__.StreamRunJobs)
+           |> GhEx.Actions.stream_run_jobs("o", "r", 9)
+           |> Enum.to_list() == [%{"id" => 3}]
+  end
 end

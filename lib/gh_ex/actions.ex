@@ -17,6 +17,19 @@ defmodule GhEx.Actions do
     REST.get(client, "/repos/#{owner}/#{repo}/actions/workflows", opts)
   end
 
+  @doc """
+  Auto-paginates the workflows in a repository into a lazy `Stream`, unwrapping
+  the `"workflows"` array on each page (see `GhEx.REST.stream/3`).
+  """
+  @spec stream_workflows(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_workflows(client, owner, repo, opts \\ []) do
+    REST.stream(
+      client,
+      "/repos/#{owner}/#{repo}/actions/workflows",
+      Keyword.put(opts, :items, "workflows")
+    )
+  end
+
   @doc "Gets a workflow by id or file name."
   @spec get_workflow(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
   def get_workflow(client, owner, repo, workflow, opts \\ []) do
@@ -43,6 +56,16 @@ defmodule GhEx.Actions do
     REST.get(client, "/repos/#{owner}/#{repo}/actions/runs", opts)
   end
 
+  @doc "Auto-paginates workflow runs into a lazy `Stream`, unwrapping `\"workflow_runs\"`."
+  @spec stream_runs(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_runs(client, owner, repo, opts \\ []) do
+    REST.stream(
+      client,
+      "/repos/#{owner}/#{repo}/actions/runs",
+      Keyword.put(opts, :items, "workflow_runs")
+    )
+  end
+
   @doc "Gets a workflow run."
   @spec get_run(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
   def get_run(client, owner, repo, run_id, opts \\ []) do
@@ -53,6 +76,16 @@ defmodule GhEx.Actions do
   @spec list_run_jobs(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
   def list_run_jobs(client, owner, repo, run_id, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/jobs", opts)
+  end
+
+  @doc "Auto-paginates the jobs for a workflow run into a lazy `Stream`, unwrapping `\"jobs\"`."
+  @spec stream_run_jobs(Client.t(), String.t(), String.t(), id(), keyword()) :: Enumerable.t()
+  def stream_run_jobs(client, owner, repo, run_id, opts \\ []) do
+    REST.stream(
+      client,
+      "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/jobs",
+      Keyword.put(opts, :items, "jobs")
+    )
   end
 
   @doc "Cancels a workflow run."

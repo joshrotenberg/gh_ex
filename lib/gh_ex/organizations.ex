@@ -20,6 +20,12 @@ defmodule GhEx.Organizations do
     REST.get(client, "/user/orgs", opts)
   end
 
+  @doc "Auto-paginates the authenticated user's organizations into a lazy `Stream`."
+  @spec stream_for_authenticated_user(Client.t(), keyword()) :: Enumerable.t()
+  def stream_for_authenticated_user(client, opts \\ []) do
+    REST.stream(client, "/user/orgs", opts)
+  end
+
   @doc "Updates an organization. `attrs` is the JSON body."
   @spec update(Client.t(), String.t(), map(), keyword()) :: REST.result()
   def update(client, org, attrs, opts \\ []) do
@@ -30,5 +36,11 @@ defmodule GhEx.Organizations do
   @spec list_members(Client.t(), String.t(), keyword()) :: REST.result()
   def list_members(client, org, opts \\ []) do
     REST.get(client, "/orgs/#{org}/members", opts)
+  end
+
+  @doc "Auto-paginates an organization's members into a lazy `Stream`."
+  @spec stream_members(Client.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_members(client, org, opts \\ []) do
+    REST.stream(client, "/orgs/#{org}/members", opts)
   end
 end

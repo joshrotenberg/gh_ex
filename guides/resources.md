@@ -6,8 +6,22 @@ endpoint path. Each function returns the same `{:ok, body, meta}` /
 `:params`, `:json`, headers, and a `Req.Test` plug all work). They cover the
 common paths; for anything else, call `GhEx.REST` directly.
 
-The `list_*` functions return a single page. For auto-pagination, use
-`GhEx.REST.stream/3` with the path (see the [Pagination](pagination.md) guide).
+The `list_*` functions return a single page. Each has a `stream_*` companion
+that auto-paginates into a lazy `Stream` of individual items, following
+`Link: rel="next"` (see the [Pagination](pagination.md) guide). The wrapped
+endpoints (Search, Actions runs/workflows/jobs, Checks) unwrap their array key
+for you.
+
+```elixir
+# every open issue, not just the first page
+client
+|> GhEx.Issues.stream("elixir-lang", "elixir", params: [state: "open", per_page: 100])
+|> Stream.map(& &1["number"])
+|> Enum.to_list()
+```
+
+For a path without a `stream_*` wrapper, call `GhEx.REST.stream/3` directly with
+the path and, for an object-wrapped response, the `items:` key.
 
 ## Issues
 

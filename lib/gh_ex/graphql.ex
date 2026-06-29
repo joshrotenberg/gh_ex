@@ -95,13 +95,20 @@ defmodule GhEx.GraphQL do
           vars = Map.put(base_vars, cursor_var, cursor)
 
           case query(client, query, vars) do
-            {:ok, data, _meta} -> emit(get_in(data, path), nodes_key)
+            {:ok, data, _meta} -> emit(dig(data, path), nodes_key)
             {:error, reason} -> raise reason
           end
       end,
       fn _ -> :ok end
     )
   end
+
+  # Walks `path` like `get_in/2`, but a non-map intermediate (e.g. a list reached
+  # by an over-specified `:path`) resolves to `nil` and halts the stream cleanly,
+  # rather than letting Access raise a raw ArgumentError from inside the stream.
+  defp dig(value, []), do: value
+  defp dig(map, [key | rest]) when is_map(map), do: dig(Map.get(map, key), rest)
+  defp dig(_value, _path), do: nil
 
   defp emit(nil, _nodes_key), do: {[], :halt}
 

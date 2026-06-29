@@ -20,6 +20,24 @@ defmodule GhEx.REST do
       GhEx.REST.get(client, "/repos/elixir-lang/elixir")
       GhEx.REST.get(client, "/repos/o/r/issues", params: [state: "open"])
       GhEx.REST.post(client, "/repos/o/r/issues", json: %{title: "Bug", body: "..."})
+
+  ## Telemetry
+
+  Every REST call (and each `stream/3` page) is wrapped in `:telemetry.span/3`,
+  emitting:
+
+    * `[:gh_ex, :request, :start]` - measurements `%{system_time, monotonic_time}`,
+      metadata `%{method, path}`.
+    * `[:gh_ex, :request, :stop]` - measurements `%{duration, monotonic_time}`,
+      metadata `%{method, path, result}` plus, on success, `status` and the
+      `rate_limit` snapshot, or, on a normalized API/transport failure,
+      `error` (the `{:error, reason}` is reported here, not as `:exception`).
+    * `[:gh_ex, :request, :exception]` - emitted only if the call raises
+      unexpectedly; measurements `%{duration, monotonic_time}`, metadata
+      `%{method, path, kind, reason, stacktrace}`.
+
+  Read `rate_limit.remaining` off the `:stop` metadata to wire rate-limit
+  headroom into a metrics pipeline.
   """
 
   alias GhEx.{Auth, Client, Error, Pagination, RateLimit, Request}
@@ -179,14 +197,33 @@ defmodule GhEx.REST do
     end
   end
 
+  # Every verb function and `stream/3` page funnels through here, so this is the
+  # single REST choke point to instrument. `:telemetry.span/3` emits
+  # `[:gh_ex, :request, :start | :stop | :exception]`; `:stop` carries the
+  # duration plus the resolved status and rate-limit snapshot, and `:exception`
+  # fires only on an unexpected raise (a normalized API/transport error comes
+  # back as `{:error, _}` and is reported on `:stop`). The result tuple is
+  # returned unchanged, so the `{:ok, body, meta} | {:error, reason}` shape holds.
   defp request(client, method, path, opts) do
-    with {:ok, client} <- Auth.resolve(client) do
-      client
-      |> Request.build(method, path, opts)
-      |> Req.request()
-      |> handle()
-    end
+    start_metadata = %{method: method, path: path}
+
+    :telemetry.span([:gh_ex, :request], start_metadata, fn ->
+      result =
+        with {:ok, client} <- Auth.resolve(client) do
+          client
+          |> Request.build(method, path, opts)
+          |> Req.request()
+          |> handle()
+        end
+
+      {result, Map.merge(start_metadata, stop_metadata(result))}
+    end)
   end
+
+  defp stop_metadata({:ok, _body, meta}),
+    do: %{result: :ok, status: meta.status, rate_limit: meta.rate_limit}
+
+  defp stop_metadata({:error, reason}), do: %{result: :error, error: reason}
 
   defp handle({:ok, %Req.Response{status: status} = resp}) when status in 200..299 do
     {:ok, resp.body, meta(resp)}

@@ -218,4 +218,54 @@ defmodule GhEx.GraphQLTest do
       end
     end
   end
+
+  describe "telemetry" do
+    setup %{test: test} do
+      :telemetry.attach_many(
+        "#{test}",
+        [[:gh_ex, :graphql, :start], [:gh_ex, :graphql, :stop]],
+        fn event, measurements, metadata, pid ->
+          send(pid, {:telemetry, event, measurements, metadata})
+        end,
+        self()
+      )
+
+      on_exit(fn -> :telemetry.detach("#{test}") end)
+    end
+
+    test "emits start and stop with status, rate_limit, and cost on success" do
+      Req.Test.stub(__MODULE__.TelOK, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("x-ratelimit-remaining", "4999")
+        |> Req.Test.json(%{
+          "data" => %{"viewer" => %{"login" => "josh"}, "rateLimit" => %{"cost" => 1}}
+        })
+      end)
+
+      assert {:ok, _data, _meta} =
+               GhEx.GraphQL.query(client(__MODULE__.TelOK), "query { viewer { login } }")
+
+      assert_received {:telemetry, [:gh_ex, :graphql, :start], _m, %{operation: :graphql}}
+
+      assert_received {:telemetry, [:gh_ex, :graphql, :stop], stop_m, meta}
+      assert is_integer(stop_m.duration)
+      assert meta.result == :ok
+      assert meta.status == 200
+      assert meta.rate_limit.remaining == 4999
+      assert meta.cost == %{"cost" => 1}
+    end
+
+    test "stop carries result: :error on a 200-with-errors body" do
+      Req.Test.stub(__MODULE__.TelErr, fn conn ->
+        Req.Test.json(conn, %{"data" => nil, "errors" => [%{"message" => "boom"}]})
+      end)
+
+      assert {:error, %GhEx.Error{}} =
+               GhEx.GraphQL.query(client(__MODULE__.TelErr), "query { viewer { login } }")
+
+      assert_received {:telemetry, [:gh_ex, :graphql, :stop], _m, meta}
+      assert meta.result == :error
+      assert %GhEx.Error{} = meta.error
+    end
+  end
 end

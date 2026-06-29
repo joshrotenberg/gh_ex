@@ -26,16 +26,18 @@ defmodule GhEx.JWT do
   key in PEM form, exactly as GitHub provides it.
 
   Returns `{:ok, jwt}`, or `{:error, reason}` when the PEM cannot be decoded
-  (`:invalid_pem`) or `:lifetime` exceeds GitHub's #{@max_lifetime}-second
-  ceiling (`{:invalid_lifetime, lifetime}`).
+  (`:invalid_pem`) or `:lifetime` is not in `1..#{@max_lifetime}`
+  (`{:invalid_lifetime, lifetime}`); a non-positive lifetime would yield an
+  already-expired token, and a longer one exceeds GitHub's ceiling.
 
   ## Options
 
     * `:now` - the current unix time in seconds. Defaults to the system clock;
       pass it in tests for a deterministic token.
     * `:skew` - seconds to backdate `iat`. Defaults to `60`.
-    * `:lifetime` - seconds from `iat` to `exp`. Defaults to `540`. Must not
-      exceed #{@max_lifetime}; GitHub rejects a longer-lived JWT.
+    * `:lifetime` - seconds from `iat` to `exp`. Defaults to `540`. Must be in
+      `1..#{@max_lifetime}`; a non-positive value mints an already-expired JWT
+      and a larger one is rejected by GitHub.
   """
   @spec mint(String.t() | integer(), String.t(), keyword()) ::
           {:ok, String.t()} | {:error, :invalid_pem | {:invalid_lifetime, integer()}}
@@ -69,7 +71,7 @@ defmodule GhEx.JWT do
     end
   end
 
-  defp validate_lifetime(lifetime) when lifetime <= @max_lifetime, do: :ok
+  defp validate_lifetime(lifetime) when lifetime > 0 and lifetime <= @max_lifetime, do: :ok
   defp validate_lifetime(lifetime), do: {:error, {:invalid_lifetime, lifetime}}
 
   defp private_key(pem) do

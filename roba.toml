@@ -11,7 +11,9 @@
 #
 # Gates are ELIXIR/mix (not cargo). The local gate mirrors CI:
 #   mix format --check-formatted && mix compile --warnings-as-errors
-#     && mix credo --strict && mix test && mix dialyzer
+#     && mix credo --strict && mix coveralls && mix dialyzer
+# (mix coveralls runs the suite AND enforces the 90% coverage floor CI checks,
+#  so it stands in for mix test and closes the local-vs-CI coverage gap.)
 #
 # WHY worker.worktree = false (deliberate, gh_ex-specific): priv/plts is
 # gitignored, and dialyzer's plt_local_path/plt_core_path point there. A fresh
@@ -25,7 +27,7 @@
 #
 # CAVEAT when you read a worker's "gates green": the worker's local toolchain
 # (OTP 29 / Elixir 1.20.1) is NEWER than CI (OTP 27 / Elixir 1.17-1.18 under
-# --warnings-as-errors), and CI also runs coveralls + hex.build. Local-green
+# --warnings-as-errors), and CI also runs hex.build and the version matrix. Local-green
 # is necessary but NOT sufficient; the authoritative verdict is CI on the PR.
 
 # ===========================================================================
@@ -121,16 +123,21 @@ PLAN     Read the issue. Its body is the spec: an exact file:line, a verified
            Proceeding with A unless redirected."
          The comment is COMPLETE, not wordy: the choice and its consequence, no
          editorializing, no em dashes (use -- or rephrase).
-BRANCH   Create a fresh branch off the latest main, in this checkout:
-           git fetch origin && git switch -c fix/${n} origin/main
+BRANCH   Create a fresh branch off the latest main, named for the change type
+         (fix/, feat/, or docs/ to match the commit you will write):
+           git fetch origin && git switch -c <type>/${n} origin/main
 IMPLEMENT Make the change. Preserve the result shape
          ({:ok, body, meta} | {:error, reason}), the standard request headers,
          and the core-over-catalog module conventions.
 TEST     Add or extend a Req.Test-based test. No live API in the suite.
-GATE     Run and pass the full local gate, in order:
+GATE     Run and pass the full local gate, in order (mix coveralls runs the
+         suite AND enforces the 90% coverage floor that CI also checks):
            mix format --check-formatted && mix compile --warnings-as-errors \\
-             && mix credo --strict && mix test && mix dialyzer
+             && mix credo --strict && mix coveralls && mix dialyzer
 COMMIT   One conventional-commit subject (release-please/elixir consumes it).
+         Pick the TYPE from the issue's kind: a bug fix is `fix:`, a new
+         capability is `feat:`, a docs-only change is `docs:`. Pre-1.0, fix/feat
+         bump the patch and docs/chore cut no release, so the type is load-bearing.
          No em dashes. No AI-attribution trailer.
 DRAFT PR Push and open a DRAFT PR with the body below. `closes #${n}` in it.
          The PR body is the durable record of intent -- COMPLETE, not wordy,
@@ -184,9 +191,10 @@ ADDRESS   Read the latest **CHANGES REQUESTED** verdict on the PR (below) and
           ({:ok, body, meta} | {:error, reason}), the standard request headers,
           and the core-over-catalog module conventions.
 TEST      Add or extend Req.Test coverage for the fix. No live API in the suite.
-GATE      Run and pass the full local gate, in order:
+GATE      Run and pass the full local gate, in order (mix coveralls runs the
+          suite AND enforces the 90% coverage floor that CI also checks):
             mix format --check-formatted && mix compile --warnings-as-errors \\
-              && mix credo --strict && mix test && mix dialyzer
+              && mix credo --strict && mix coveralls && mix dialyzer
 COMMIT    One conventional-commit subject. No em dashes. No AI-attribution
           trailer.
 PUSH      Update the open PR:

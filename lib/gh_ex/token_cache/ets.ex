@@ -33,6 +33,23 @@ defmodule GhEx.TokenCache.ETS do
 
   A token is considered fresh until `#{60}` seconds before its `expires_at`, so a
   refresh happens slightly ahead of the real expiry.
+
+  ## Security: the table is `:public`
+
+  The table is created `:named_table, :public`, so any process in the same VM can
+  call `:ets.lookup(GhEx.TokenCache.ETS, key)` and read cached installation tokens
+  directly, bypassing this module's API. The `:public` access is load-bearing, not
+  incidental: reads run in the calling process for the lock-free fast path, which is
+  the whole point of the ETS cache. `:protected` would not change the trust boundary
+  (a protected table is still world-readable); only `:private` restricts reads, and
+  that would force every read back through the GenServer and give up the fast path.
+
+  Treat this as an inherent BEAM trust property rather than a privilege escalation:
+  any same-VM process can already read another process's state and messages and any
+  ETS table, so the cached token is no more exposed than the credentials that mint
+  it. The trust boundary is the VM. If you need installation tokens isolated from
+  other code, isolate at that level (a separate node or OS process), not inside one
+  shared VM.
   """
 
   @behaviour GhEx.TokenCache

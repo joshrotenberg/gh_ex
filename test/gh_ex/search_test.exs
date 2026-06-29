@@ -20,6 +20,19 @@ defmodule GhEx.SearchTest do
              )
   end
 
+  test "repositories/3 accepts :params as a map" do
+    Req.Test.stub(__MODULE__.ReposMap, fn conn ->
+      assert conn.request_path == "/search/repositories"
+      assert query(conn) == %{"q" => "tetris", "sort" => "stars"}
+      Req.Test.json(conn, %{"total_count" => 1})
+    end)
+
+    assert {:ok, %{"total_count" => 1}, _} =
+             GhEx.Search.repositories(client(__MODULE__.ReposMap), "tetris",
+               params: %{sort: "stars"}
+             )
+  end
+
   test "code/3 searches code" do
     Req.Test.stub(__MODULE__.Code, fn conn ->
       assert conn.request_path == "/search/code"

@@ -21,6 +21,25 @@ defmodule GhEx.REST do
       GhEx.REST.get(client, "/repos/o/r/issues", params: [state: "open"])
       GhEx.REST.post(client, "/repos/o/r/issues", json: %{title: "Bug", body: "..."})
 
+  ## Conditional requests
+
+  Each successful response's `meta` carries the `:etag` and `:last_modified`
+  headers. Store one and send it back to make the next request conditional:
+
+      {:ok, body, meta} = GhEx.REST.get(client, "/repos/o/r/issues")
+
+      case GhEx.REST.get(client, "/repos/o/r/issues",
+             headers: [{"if-none-match", meta.etag}]) do
+        {:ok, :not_modified, meta} -> # unchanged; reuse the cached body
+        {:ok, body, meta} -> # changed; meta.etag is the new validator
+      end
+
+  A `304 Not Modified` comes back as `{:ok, :not_modified, meta}`, distinct from
+  both a normal `{:ok, body, meta}` and an `{:error, _}`. GitHub does not charge a
+  `304` against the primary rate limit, so polling with the stored validator is
+  cheaper than refetching. Storing the body is the caller's job; this is opt-in
+  ergonomics, not a response cache.
+
   ## Telemetry
 
   Every REST call (and each `stream/3` page) is wrapped in `:telemetry.span/3`,
@@ -229,6 +248,14 @@ defmodule GhEx.REST do
     {:ok, resp.body, meta(resp)}
   end
 
+  # A `304 Not Modified` answers a conditional request (`If-None-Match` /
+  # `If-Modified-Since`): the resource is unchanged, so GitHub sends no body and,
+  # importantly, does not charge it against the primary rate limit. Return a
+  # distinct `:not_modified` rather than the contradictory "HTTP 304 error", so a
+  # poller can tell "unchanged" from a real failure. `meta` still carries the
+  # fresh `ETag`/`Last-Modified` to send on the next poll.
+  defp handle({:ok, %Req.Response{status: 304} = resp}), do: {:ok, :not_modified, meta(resp)}
+
   defp handle({:ok, %Req.Response{} = resp}), do: {:error, Error.from_response(resp)}
   defp handle({:error, exception}), do: {:error, exception}
 
@@ -237,7 +264,16 @@ defmodule GhEx.REST do
       status: resp.status,
       headers: resp.headers,
       links: Pagination.links(resp),
-      rate_limit: RateLimit.from_response(resp)
+      rate_limit: RateLimit.from_response(resp),
+      etag: header_first(resp, "etag"),
+      last_modified: header_first(resp, "last-modified")
     }
+  end
+
+  defp header_first(resp, name) do
+    case Req.Response.get_header(resp, name) do
+      [value | _] -> value
+      [] -> nil
+    end
   end
 end

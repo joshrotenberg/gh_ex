@@ -208,6 +208,49 @@ defmodule GhEx.RESTTest do
     end
   end
 
+  describe "conditional requests" do
+    test "exposes :etag and :last_modified on a 2xx meta" do
+      Req.Test.stub(__MODULE__.Validators, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("etag", ~s("abc123"))
+        |> Plug.Conn.put_resp_header("last-modified", "Mon, 01 Jan 2024 00:00:00 GMT")
+        |> Req.Test.json(%{"ok" => true})
+      end)
+
+      assert {:ok, _body, meta} = GhEx.REST.get(client(__MODULE__.Validators), "/repos/o/r")
+      assert meta.etag == ~s("abc123")
+      assert meta.last_modified == "Mon, 01 Jan 2024 00:00:00 GMT"
+    end
+
+    test "leaves :etag and :last_modified nil when the headers are absent" do
+      Req.Test.stub(__MODULE__.NoValidators, fn conn ->
+        Req.Test.json(conn, %{"ok" => true})
+      end)
+
+      assert {:ok, _body, meta} = GhEx.REST.get(client(__MODULE__.NoValidators), "/repos/o/r")
+      assert meta.etag == nil
+      assert meta.last_modified == nil
+    end
+
+    test "returns {:ok, :not_modified, meta} on a 304 instead of an error" do
+      Req.Test.stub(__MODULE__.NotModified, fn conn ->
+        assert ["\"abc123\""] = Plug.Conn.get_req_header(conn, "if-none-match")
+
+        conn
+        |> Plug.Conn.put_resp_header("etag", ~s("abc123"))
+        |> Plug.Conn.send_resp(304, "")
+      end)
+
+      assert {:ok, :not_modified, meta} =
+               GhEx.REST.get(client(__MODULE__.NotModified), "/repos/o/r",
+                 headers: [{"if-none-match", ~s("abc123")}]
+               )
+
+      assert meta.status == 304
+      assert meta.etag == ~s("abc123")
+    end
+  end
+
   describe "raw/4" do
     test "returns the raw response and does not treat a non-2xx as an error" do
       Req.Test.stub(__MODULE__.Raw, fn conn ->

@@ -79,7 +79,7 @@ defmodule GhEx.SearchTest do
   test "stream_repositories/3 unwraps items and keeps the q param" do
     Req.Test.stub(__MODULE__.StreamRepos, fn conn ->
       assert conn.request_path == "/search/repositories"
-      assert query(conn) == %{"q" => "tetris", "sort" => "stars"}
+      assert query(conn) == %{"q" => "tetris", "sort" => "stars", "per_page" => "100"}
       Req.Test.json(conn, %{"total_count" => 1, "items" => [%{"id" => 1}]})
     end)
 

@@ -117,6 +117,64 @@ defmodule GhEx.RateLimit do
   defp secondary_rate_limit?(_resp), do: false
 
   @doc """
+  Computes how long to wait, in milliseconds, before the next request, given the
+  rate-limit snapshot from a prior response's `meta`.
+
+  Returns `0` when there is headroom (`remaining` above `:floor`), when the
+  snapshot is `nil`, or when `remaining`/`reset` are absent. Otherwise returns the
+  milliseconds until `reset` (clamped at `0` for an already-past reset), plus an
+  optional `:buffer_ms`.
+
+  This is a pure calculation; it never sleeps. The library deliberately leaves the
+  wait to you, so you decide when and whether to block. Feed it the prior
+  response's `meta.rate_limit` and act on the result:
+
+      {:ok, _body, meta} = GhEx.REST.get(client, path)
+
+      case GhEx.RateLimit.delay_until_reset(meta.rate_limit, floor: 50) do
+        0 -> :ok
+        ms -> Process.sleep(ms)
+      end
+
+  ## Options
+
+    * `:floor` - wait when `remaining <= floor`. Defaults to `0` (wait only once
+      the bucket is fully exhausted). A small positive floor (e.g. `50`) pauses
+      while there is still headroom to spare.
+    * `:buffer_ms` - added to a non-zero wait, to absorb clock skew. Defaults to `0`.
+    * `:now` - the `DateTime` to measure from. Defaults to `DateTime.utc_now/0`;
+      injectable in tests.
+
+  ## Scope
+
+  This guards the *next* call from a snapshot you thread in. It cannot pre-empt the
+  first call of a session (there is no prior snapshot), and a single snapshot is a
+  partial view when several processes share one token. `retry/2` remains the
+  reactive backstop for calls that still hit the limit.
+  """
+  @spec delay_until_reset(t() | nil, keyword()) :: non_neg_integer()
+  def delay_until_reset(snapshot, opts \\ [])
+
+  def delay_until_reset(nil, _opts), do: 0
+
+  def delay_until_reset(%__MODULE__{remaining: remaining, reset: reset}, opts) do
+    floor = Keyword.get(opts, :floor, 0)
+
+    cond do
+      is_nil(remaining) or is_nil(reset) ->
+        0
+
+      remaining > floor ->
+        0
+
+      true ->
+        now = Keyword.get(opts, :now, DateTime.utc_now())
+        buffer = Keyword.get(opts, :buffer_ms, 0)
+        max(0, DateTime.diff(reset, now, :millisecond)) + buffer
+    end
+  end
+
+  @doc """
   Fetches rate-limit status from `GET /rate_limit`.
 
   This endpoint does not count against your rate limit. Returns the full body,

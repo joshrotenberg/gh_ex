@@ -41,7 +41,12 @@ defmodule GhEx.Search do
   end
 
   defp with_query(opts, query) do
-    params = Keyword.put(Keyword.get(opts, :params, []), :q, query)
+    params =
+      opts
+      |> Keyword.get(:params, [])
+      |> Enum.to_list()
+      |> Keyword.put(:q, query)
+
     Keyword.put(opts, :params, params)
   end
 end

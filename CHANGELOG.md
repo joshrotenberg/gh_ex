@@ -4,6 +4,31 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 semantic versioning.
 
+## [0.3.2](https://github.com/joshrotenberg/gh_ex/compare/v0.3.1...v0.3.2) (2026-06-29)
+
+
+### Features
+
+* add GhEx.RateLimit.delay_until_reset/2 for opt-in proactive pacing ([#101](https://github.com/joshrotenberg/gh_ex/issues/101)) ([dedf9d5](https://github.com/joshrotenberg/gh_ex/commit/dedf9d5d8d04715e00241b3841f88817ac95513a))
+* add stream_* auto-pagination companions to the convenience modules ([#91](https://github.com/joshrotenberg/gh_ex/issues/91)) ([7235196](https://github.com/joshrotenberg/gh_ex/commit/7235196145cd5f993f5715e080732f44ab87bb9d)), closes [#66](https://github.com/joshrotenberg/gh_ex/issues/66)
+* default per_page to 100 in REST.stream/3 ([#92](https://github.com/joshrotenberg/gh_ex/issues/92)) ([be06994](https://github.com/joshrotenberg/gh_ex/commit/be0699459c4ed24104cfd433439bcb2d6ba03dd0)), closes [#70](https://github.com/joshrotenberg/gh_ex/issues/70)
+* emit :telemetry spans around REST and GraphQL requests ([#96](https://github.com/joshrotenberg/gh_ex/issues/96)) ([e54733b](https://github.com/joshrotenberg/gh_ex/commit/e54733b8d3d10a62a0a746ecfb1fc20b67e1cf68))
+* handle 304 Not Modified and expose ETag/Last-Modified on REST meta ([#97](https://github.com/joshrotenberg/gh_ex/issues/97)) ([59f5bf2](https://github.com/joshrotenberg/gh_ex/commit/59f5bf2a05e941854388a1ecb526d50ed7430dd9)), closes [#68](https://github.com/joshrotenberg/gh_ex/issues/68)
+
+
+### Bug Fixes
+
+* accept :params as a map in GhEx.Search ([#88](https://github.com/joshrotenberg/gh_ex/issues/88)) ([b563252](https://github.com/joshrotenberg/gh_ex/commit/b563252aa75014f8446d09e014da07f050493dc2))
+* detect body-only secondary rate limit in RateLimit.retry/2 ([#98](https://github.com/joshrotenberg/gh_ex/issues/98)) ([be52b01](https://github.com/joshrotenberg/gh_ex/commit/be52b01e85f3f9e12c242ec364eee00884427c3a))
+* halt GraphQL.stream when :path traverses a non-map intermediate ([#89](https://github.com/joshrotenberg/gh_ex/issues/89)) ([95262a4](https://github.com/joshrotenberg/gh_ex/commit/95262a4d63c984a44e0088d54b2805de380b8e97)), closes [#64](https://github.com/joshrotenberg/gh_ex/issues/64)
+* halt GraphQL.stream when endCursor is nil despite hasNextPage ([#81](https://github.com/joshrotenberg/gh_ex/issues/81)) ([cfc3227](https://github.com/joshrotenberg/gh_ex/commit/cfc32270750dc07d6db771fb12b8127033b9b861))
+* label a GraphQL 200 with a non-map body as a shape error, not HTTP 200 ([#84](https://github.com/joshrotenberg/gh_ex/issues/84)) ([6d0264e](https://github.com/joshrotenberg/gh_ex/commit/6d0264e9e841a23b8b717cefc4b8e637b7caf9bf))
+* redact credentials from GhEx.Client and cached token inspect ([#77](https://github.com/joshrotenberg/gh_ex/issues/77)) ([a514f88](https://github.com/joshrotenberg/gh_ex/commit/a514f88bf063ae25c94c38278009c78481292ff8))
+* refuse cross-host pagination URL in REST.stream/3 ([#85](https://github.com/joshrotenberg/gh_ex/issues/85)) ([f9cc218](https://github.com/joshrotenberg/gh_ex/commit/f9cc218709d77e1088edb0cbb8feda29c571d6d8))
+* reject a zero or negative JWT :lifetime that mints an expired token ([#90](https://github.com/joshrotenberg/gh_ex/issues/90)) ([c81d071](https://github.com/joshrotenberg/gh_ex/commit/c81d071fa9ab765a217c78c147b89e20424a9fe5))
+* run installation-token mint off the GenServer to avoid 5s call timeout ([#82](https://github.com/joshrotenberg/gh_ex/issues/82)) ([db15e64](https://github.com/joshrotenberg/gh_ex/commit/db15e648cb5aec6c81d58453f2bb91d6a3c5b0fa))
+* URL-encode the file path in GhEx.Contents ([#83](https://github.com/joshrotenberg/gh_ex/issues/83)) ([ff3e0b8](https://github.com/joshrotenberg/gh_ex/commit/ff3e0b885de0cdceec90e62ffc8523eabea93437))
+
 ## [0.3.1](https://github.com/joshrotenberg/gh_ex/compare/v0.3.0...v0.3.1) (2026-06-26)
 
 

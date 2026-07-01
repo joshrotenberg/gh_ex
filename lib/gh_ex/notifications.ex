@@ -97,6 +97,37 @@ defmodule GhEx.Notifications do
     REST.put(client, "/repos/#{owner}/#{repo}/notifications", Keyword.put(opts, :json, json))
   end
 
+  @doc "Gets a thread's subscription (`GET /notifications/threads/{id}/subscription`)."
+  @spec get_thread_subscription(Client.t(), thread_ref(), keyword()) :: REST.result()
+  def get_thread_subscription(client, thread_id, opts \\ []) do
+    REST.get(client, "/notifications/threads/#{thread_id}/subscription", opts)
+  end
+
+  @doc """
+  Sets a thread's subscription (`PUT /notifications/threads/{id}/subscription`).
+
+  `attrs` is the JSON body: `%{ignored: true}` mutes the thread, `%{ignored: false}`
+  subscribes to it.
+  """
+  @spec set_thread_subscription(Client.t(), thread_ref(), map(), keyword()) :: REST.result()
+  def set_thread_subscription(client, thread_id, attrs, opts \\ []) do
+    REST.put(
+      client,
+      "/notifications/threads/#{thread_id}/subscription",
+      Keyword.put(opts, :json, attrs)
+    )
+  end
+
+  @doc """
+  Deletes a thread's subscription
+  (`DELETE /notifications/threads/{id}/subscription`), unsubscribing without
+  muting.
+  """
+  @spec delete_thread_subscription(Client.t(), thread_ref(), keyword()) :: REST.result()
+  def delete_thread_subscription(client, thread_id, opts \\ []) do
+    REST.delete(client, "/notifications/threads/#{thread_id}/subscription", opts)
+  end
+
   @doc """
   Reads the `X-Poll-Interval` response header off a `GhEx.REST.Meta`, the number
   of seconds GitHub asks you to wait before polling `/notifications` again.

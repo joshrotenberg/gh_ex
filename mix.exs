@@ -72,6 +72,7 @@ defmodule GhEx.MixProject do
         "guides/resources.md",
         "guides/authentication.md",
         "guides/pagination.md",
+        "guides/notifications.md",
         "guides/error-handling.md",
         "guides/github-enterprise-server.md",
         "guides/testing.md",
@@ -97,7 +98,8 @@ defmodule GhEx.MixProject do
           GhEx.Checks,
           GhEx.Statuses,
           GhEx.Gists,
-          GhEx.Webhooks
+          GhEx.Webhooks,
+          GhEx.Notifications
         ],
         Authentication: [
           GhEx.Auth,

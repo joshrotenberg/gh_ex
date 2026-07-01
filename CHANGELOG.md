@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 semantic versioning.
 
+## [0.3.3](https://github.com/joshrotenberg/gh_ex/compare/v0.3.2...v0.3.3) (2026-07-01)
+
+
+### Features
+
+* add GhEx.Notifications for consuming the notifications inbox ([#104](https://github.com/joshrotenberg/gh_ex/issues/104)) ([2c0668e](https://github.com/joshrotenberg/gh_ex/commit/2c0668e9be3b4436a8ec28dd84ef875e353cf956))
+* add GhEx.Notifications thread subscription management ([#106](https://github.com/joshrotenberg/gh_ex/issues/106)) ([a40efc4](https://github.com/joshrotenberg/gh_ex/commit/a40efc4cfb635a625c664960c6adcf81c6cf8980))
+
 ## [0.3.2](https://github.com/joshrotenberg/gh_ex/compare/v0.3.1...v0.3.2) (2026-06-29)
 
 

@@ -68,5 +68,10 @@ poll_interval(meta)}` instead of sleeping, and store `meta.last_modified` (or
 ## What is not here
 
 `GhEx.Notifications` is a client, not a consumer engine: no poll loop, dedup, or
-state ship with it. Thread and repository subscriptions (which control what lands
-in the inbox) are tracked separately.
+state ship with it.
+
+Thread subscriptions are supported: `get_thread_subscription/3`,
+`set_thread_subscription/4` (`%{ignored: true}` to mute, `%{ignored: false}` to
+subscribe), and `delete_thread_subscription/3`. Repository watch subscriptions,
+which govern what enters the inbox at the repo level, belong to the Watching API
+and are tracked separately.

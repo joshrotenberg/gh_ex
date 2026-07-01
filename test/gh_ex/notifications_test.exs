@@ -124,6 +124,44 @@ defmodule GhEx.NotificationsTest do
     assert meta.status == 202
   end
 
+  test "get_thread_subscription/3 GETs the thread subscription" do
+    Req.Test.stub(__MODULE__.GetSub, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/notifications/threads/42/subscription"
+      Req.Test.json(conn, %{"subscribed" => true, "ignored" => false})
+    end)
+
+    assert {:ok, %{"subscribed" => true}, _} =
+             GhEx.Notifications.get_thread_subscription(client(__MODULE__.GetSub), 42)
+  end
+
+  test "set_thread_subscription/4 PUTs the subscription body" do
+    Req.Test.stub(__MODULE__.SetSub, fn conn ->
+      assert conn.method == "PUT"
+      assert conn.request_path == "/notifications/threads/42/subscription"
+      assert body(conn) == %{"ignored" => true}
+      Req.Test.json(conn, %{"ignored" => true})
+    end)
+
+    assert {:ok, %{"ignored" => true}, _} =
+             GhEx.Notifications.set_thread_subscription(client(__MODULE__.SetSub), 42, %{
+               ignored: true
+             })
+  end
+
+  test "delete_thread_subscription/3 DELETEs the subscription" do
+    Req.Test.stub(__MODULE__.DelSub, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/notifications/threads/42/subscription"
+      Plug.Conn.send_resp(conn, 204, "")
+    end)
+
+    assert {:ok, _body, meta} =
+             GhEx.Notifications.delete_thread_subscription(client(__MODULE__.DelSub), 42)
+
+    assert meta.status == 204
+  end
+
   describe "poll_interval/2" do
     test "reads the X-Poll-Interval header" do
       meta = %GhEx.REST.Meta{headers: %{"x-poll-interval" => ["90"]}}

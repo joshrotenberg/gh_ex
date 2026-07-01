@@ -1,7 +1,7 @@
 defmodule GhEx.MixProject do
   use Mix.Project
 
-  @version "0.3.2"
+  @version "0.3.3"
   @source_url "https://github.com/joshrotenberg/gh_ex"
 
   def project do

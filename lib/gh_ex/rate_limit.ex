@@ -32,9 +32,9 @@ defmodule GhEx.RateLimit do
   Builds a snapshot from a response, or `nil` when no rate-limit headers exist.
   """
   @spec from_response(Req.Response.t()) :: t() | nil
-  def from_response(%Req.Response{} = resp) do
-    limit = header_int(resp, "x-ratelimit-limit")
-    remaining = header_int(resp, "x-ratelimit-remaining")
+  def from_response(%Req.Response{headers: headers}) do
+    limit = header_int(headers, "x-ratelimit-limit")
+    remaining = header_int(headers, "x-ratelimit-remaining")
 
     if is_nil(limit) and is_nil(remaining) do
       nil
@@ -42,9 +42,9 @@ defmodule GhEx.RateLimit do
       %__MODULE__{
         limit: limit,
         remaining: remaining,
-        used: header_int(resp, "x-ratelimit-used"),
-        reset: header_reset(resp),
-        resource: header_str(resp, "x-ratelimit-resource")
+        used: header_int(headers, "x-ratelimit-used"),
+        reset: header_reset(headers),
+        resource: header_str(headers, "x-ratelimit-resource")
       }
     end
   end
@@ -70,7 +70,7 @@ defmodule GhEx.RateLimit do
   @spec retry(Req.Request.t(), Req.Response.t() | Exception.t()) ::
           {:delay, non_neg_integer()} | boolean()
   def retry(_request, %Req.Response{status: status} = resp) when status in [403, 429] do
-    case rate_limit_delay_ms(resp) do
+    case rate_limit_delay_ms(resp.headers, resp.body) do
       nil -> status == 429
       ms -> {:delay, ms}
     end
@@ -82,18 +82,35 @@ defmodule GhEx.RateLimit do
 
   def retry(_request, _response_or_exception), do: false
 
-  defp rate_limit_delay_ms(resp) do
+  @doc """
+  True when `status`, `headers`, and `body` together signal one of GitHub's
+  rate limits: a `429`, or a `403` carrying a `retry-after` header, an
+  `x-ratelimit-remaining: 0`, or a secondary-rate-limit body message. A plain
+  `403` (an authorization failure, not a rate limit) returns `false`, as does
+  any other status.
+
+  Shares the detection `retry/2` runs against a live `Req.Response`, so a
+  caller working from an already-normalized `GhEx.Error` (which has no live
+  response to re-inspect) reaches the same conclusion without re-deriving the
+  logic. See `GhEx.Error.classify/1` and `GhEx.Error.retryable?/1`.
+  """
+  @spec rate_limited?(pos_integer() | nil, map() | nil, term()) :: boolean()
+  def rate_limited?(429, _headers, _body), do: true
+  def rate_limited?(403, headers, body), do: rate_limit_delay_ms(headers, body) != nil
+  def rate_limited?(_status, _headers, _body), do: false
+
+  defp rate_limit_delay_ms(headers, body) do
     cond do
-      (after_s = header_int(resp, "retry-after")) != nil ->
+      (after_s = header_int(headers, "retry-after")) != nil ->
         max(0, after_s) * 1000
 
-      header_int(resp, "x-ratelimit-remaining") == 0 ->
-        case header_int(resp, "x-ratelimit-reset") do
+      header_int(headers, "x-ratelimit-remaining") == 0 ->
+        case header_int(headers, "x-ratelimit-reset") do
           nil -> nil
           reset -> max(0, reset - System.system_time(:second)) * 1000
         end
 
-      secondary_rate_limit?(resp) ->
+      secondary_rate_limit?(body) ->
         @secondary_delay_ms
 
       true ->
@@ -104,17 +121,16 @@ defmodule GhEx.RateLimit do
   # Req's `:retry` response step runs before `:decode_body`, so at retry time the
   # body is still the raw JSON string, not a decoded map: match the string (the
   # production case). The map clause covers an already-decoded body, e.g. when a
-  # caller reorders steps or pre-decodes.
-  defp secondary_rate_limit?(%Req.Response{body: body}) when is_binary(body) do
+  # caller reorders steps, pre-decodes, or reads it back off a stored `GhEx.Error`.
+  defp secondary_rate_limit?(body) when is_binary(body) do
     String.contains?(String.downcase(body), "secondary rate limit")
   end
 
-  defp secondary_rate_limit?(%Req.Response{body: %{"message" => message}})
-       when is_binary(message) do
+  defp secondary_rate_limit?(%{"message" => message}) when is_binary(message) do
     String.contains?(String.downcase(message), "secondary rate limit")
   end
 
-  defp secondary_rate_limit?(_resp), do: false
+  defp secondary_rate_limit?(_body), do: false
 
   @doc """
   Computes how long to wait, in milliseconds, before the next request, given the
@@ -183,15 +199,18 @@ defmodule GhEx.RateLimit do
   @spec get(GhEx.Client.t()) :: GhEx.REST.result()
   def get(client), do: GhEx.REST.get(client, "/rate_limit")
 
-  defp header_str(resp, name) do
-    case Req.Response.get_header(resp, name) do
+  # `headers` is a plain %{binary => [binary]} map, the shape both
+  # `Req.Response.headers` and `GhEx.Error.headers` carry, so this works
+  # whether the caller has a live response or an already-normalized error.
+  defp header_str(headers, name) do
+    case Map.get(headers || %{}, name, []) do
       [value | _] -> value
       [] -> nil
     end
   end
 
-  defp header_int(resp, name) do
-    with value when is_binary(value) <- header_str(resp, name),
+  defp header_int(headers, name) do
+    with value when is_binary(value) <- header_str(headers, name),
          {int, _} <- Integer.parse(value) do
       int
     else
@@ -199,8 +218,8 @@ defmodule GhEx.RateLimit do
     end
   end
 
-  defp header_reset(resp) do
-    case header_int(resp, "x-ratelimit-reset") do
+  defp header_reset(headers) do
+    case header_int(headers, "x-ratelimit-reset") do
       nil -> nil
       epoch -> DateTime.from_unix!(epoch)
     end

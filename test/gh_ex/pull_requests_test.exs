@@ -31,6 +31,50 @@ defmodule GhEx.PullRequestsTest do
     assert {:ok, %{"number" => 7}, _} = GhEx.PullRequests.get(client(__MODULE__.Get), "o", "r", 7)
   end
 
+  test "get_diff/4 requests and returns the raw diff while preserving other headers" do
+    diff = "diff --git a/lib/a.ex b/lib/a.ex\n+added\n"
+
+    Req.Test.stub(__MODULE__.Diff, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/7"
+      assert Plug.Conn.get_req_header(conn, "accept") == ["application/vnd.github.diff"]
+      assert Plug.Conn.get_req_header(conn, "if-none-match") == [~s("abc123")]
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/vnd.github.diff")
+      |> Plug.Conn.send_resp(200, diff)
+    end)
+
+    assert {:ok, ^diff, _} =
+             GhEx.PullRequests.get_diff(client(__MODULE__.Diff), "o", "r", 7,
+               headers: [{"accept", "application/json"}, {"if-none-match", ~s("abc123")}]
+             )
+  end
+
+  test "get_patch/4 requests and returns the raw patch" do
+    patch = "From abc123 Mon Sep 17 00:00:00 2001\nSubject: [PATCH] change\n"
+
+    Req.Test.stub(__MODULE__.Patch, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/7"
+      assert Plug.Conn.get_req_header(conn, "accept") == ["application/vnd.github.patch"]
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/vnd.github.patch")
+      |> Plug.Conn.send_resp(200, patch)
+    end)
+
+    assert {:ok, ^patch, _} = GhEx.PullRequests.get_patch(client(__MODULE__.Patch), "o", "r", 7)
+  end
+
+  test "get_diff/4 keeps JSON error decoding enabled" do
+    Req.Test.stub(__MODULE__.DiffError, fn conn ->
+      conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"message" => "Not Found"})
+    end)
+
+    assert {:error,
+            %GhEx.Error{status: 404, message: "Not Found", body: %{"message" => "Not Found"}}} =
+             GhEx.PullRequests.get_diff(client(__MODULE__.DiffError), "o", "r", 7)
+  end
+
   test "create/4 POSTs the pull request body" do
     Req.Test.stub(__MODULE__.Create, fn conn ->
       assert conn.method == "POST"
@@ -178,6 +222,64 @@ defmodule GhEx.PullRequestsTest do
              GhEx.PullRequests.list_reviews(client(__MODULE__.Reviews), "o", "r", 7)
   end
 
+  test "list_comments/4 GETs review comments and passes filters" do
+    Req.Test.stub(__MODULE__.Comments, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/7/comments"
+      assert conn.query_string == "direction=desc"
+      Req.Test.json(conn, [%{"id" => 11, "path" => "lib/a.ex"}])
+    end)
+
+    assert {:ok, [%{"id" => 11}], _} =
+             GhEx.PullRequests.list_comments(client(__MODULE__.Comments), "o", "r", 7,
+               params: [direction: "desc"]
+             )
+  end
+
+  test "create_comment/5 POSTs a line-anchored review comment" do
+    Req.Test.stub(__MODULE__.Comment, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/pulls/7/comments"
+
+      assert body(conn) == %{
+               "body" => "Please handle nil.",
+               "commit_id" => "abc123",
+               "path" => "lib/a.ex",
+               "line" => 12,
+               "side" => "RIGHT"
+             }
+
+      conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"id" => 11})
+    end)
+
+    assert {:ok, %{"id" => 11}, _} =
+             GhEx.PullRequests.create_comment(client(__MODULE__.Comment), "o", "r", 7, %{
+               body: "Please handle nil.",
+               commit_id: "abc123",
+               path: "lib/a.ex",
+               line: 12,
+               side: "RIGHT"
+             })
+  end
+
+  test "reply_to_comment/6 POSTs a reply to a top-level review comment" do
+    Req.Test.stub(__MODULE__.Reply, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/pulls/7/comments/11/replies"
+      assert body(conn) == %{"body" => "Fixed, thanks."}
+      conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"id" => 12})
+    end)
+
+    assert {:ok, %{"id" => 12}, _} =
+             GhEx.PullRequests.reply_to_comment(
+               client(__MODULE__.Reply),
+               "o",
+               "r",
+               7,
+               11,
+               "Fixed, thanks."
+             )
+  end
+
   test "create_review/5 POSTs a review" do
     Req.Test.stub(__MODULE__.Review, fn conn ->
       assert conn.method == "POST"
@@ -222,5 +324,16 @@ defmodule GhEx.PullRequestsTest do
     assert client(__MODULE__.StreamReviews)
            |> GhEx.PullRequests.stream_reviews("o", "r", 42)
            |> Enum.to_list() == [%{"id" => 1}]
+  end
+
+  test "stream_comments/4 auto-paginates pull request review comments" do
+    Req.Test.stub(__MODULE__.StreamComments, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/42/comments"
+      Req.Test.json(conn, [%{"id" => 11}])
+    end)
+
+    assert client(__MODULE__.StreamComments)
+           |> GhEx.PullRequests.stream_comments("o", "r", 42)
+           |> Enum.to_list() == [%{"id" => 11}]
   end
 end

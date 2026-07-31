@@ -79,6 +79,66 @@ defmodule GhEx.Issues do
     )
   end
 
+  @doc """
+  Updates an issue or pull request comment.
+
+  Useful for rolling status comments that should be edited in place instead of
+  creating a new comment on every update.
+  """
+  @spec update_comment(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          String.t(),
+          keyword()
+        ) :: REST.result()
+  def update_comment(client, owner, repo, comment_id, body, opts \\ []) do
+    REST.patch(
+      client,
+      "/repos/#{owner}/#{repo}/issues/comments/#{comment_id}",
+      Keyword.put(opts, :json, %{body: body})
+    )
+  end
+
+  @doc """
+  Adds up to 10 assignees without replacing the issue's existing assignees.
+
+  GitHub silently ignores users who cannot be assigned.
+  """
+  @spec add_assignees(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          [String.t()],
+          keyword()
+        ) :: REST.result()
+  def add_assignees(client, owner, repo, number, assignees, opts \\ []) do
+    REST.post(
+      client,
+      "/repos/#{owner}/#{repo}/issues/#{number}/assignees",
+      Keyword.put(opts, :json, %{assignees: assignees})
+    )
+  end
+
+  @doc "Removes selected assignees without changing any other assignees."
+  @spec remove_assignees(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          [String.t()],
+          keyword()
+        ) :: REST.result()
+  def remove_assignees(client, owner, repo, number, assignees, opts \\ []) do
+    REST.delete(
+      client,
+      "/repos/#{owner}/#{repo}/issues/#{number}/assignees",
+      Keyword.put(opts, :json, %{assignees: assignees})
+    )
+  end
+
   @doc "Adds labels to an issue. `labels` is a list of label names."
   @spec add_labels(Client.t(), String.t(), String.t(), number_ref(), [String.t()], keyword()) ::
           REST.result()

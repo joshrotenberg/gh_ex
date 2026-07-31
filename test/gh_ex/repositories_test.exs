@@ -120,18 +120,19 @@ defmodule GhEx.RepositoriesTest do
       })
     end)
 
-    assert {:ok,
-            %{
-              "permission" => "write",
-              "role_name" => "maintain",
-              "user" => %{"login" => "octo/cat"}
-            }, _meta} =
+    assert {:ok, permission, _meta} =
              GhEx.Repositories.get_collaborator_permission(
                client(__MODULE__.CollaboratorPermission),
                "o",
                "r",
                "octo/cat"
              )
+
+    assert permission == %{
+             "permission" => "write",
+             "role_name" => "maintain",
+             "user" => %{"login" => "octo/cat"}
+           }
   end
 
   test "list_commits/3 GETs commits" do

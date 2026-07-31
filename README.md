@@ -26,16 +26,16 @@ See `SPEC.md` for the design rationale.
   the core. Typed modules such as `GhEx.Issues` and `GhEx.PullRequests` wrap the
   common paths and are added as they are needed.
 
-> Status: pre-release (0.1). M1 (REST core), M2 (GraphQL core), and M3 (GitHub
-> App auth: JWT, one-shot installation tokens, and transparent installation-token
-> caching) are implemented and tested. The public namespace is `GhEx`.
+> Status: pre-1.0 (0.3). The REST and GraphQL cores, GitHub App authentication,
+> installation-token caching, and demand-driven convenience modules are
+> implemented and tested. The public namespace is `GhEx`.
 
 ## Installation
 
 ```elixir
 def deps do
   [
-    {:gh_ex, "~> 0.1.0"}
+    {:gh_ex, "~> 0.3.4"}
   ]
 end
 ```
@@ -193,8 +193,12 @@ App and installation auth.
 ## Documentation
 
 Run `mix docs`, or start with the [getting-started guide](guides/getting-started.md).
-Guides cover [authentication](guides/authentication.md),
-[pagination](guides/pagination.md), [error handling](guides/error-handling.md),
+The [resource guide](guides/resources.md) surveys the convenience modules, and
+[extending gh_ex](guides/extending.md) shows how to add application-owned
+wrappers. Dedicated guides cover [authentication](guides/authentication.md),
+[pagination](guides/pagination.md), [notifications](guides/notifications.md),
+[webhooks](guides/webhooks.md), [stacked pull requests](guides/stacks.md),
+[error handling](guides/error-handling.md),
 [GitHub Enterprise Server](guides/github-enterprise-server.md), and
 [testing](guides/testing.md).
 

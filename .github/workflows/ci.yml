@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -26,8 +31,10 @@ jobs:
             _build
           key: ${{ runner.os }}-lint-${{ hashFiles('**/mix.lock') }}
       - run: mix deps.get
+      - run: mix hex.audit
       - run: mix format --check-formatted
       - run: mix credo --strict
+      - run: mix docs --warnings-as-errors
       - run: mix coveralls
       - name: Verify the package assembles
         run: mix hex.build
@@ -43,6 +50,8 @@ jobs:
             otp: "27"
           - elixir: "1.18"
             otp: "27"
+          - elixir: "1.20"
+            otp: "29"
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1

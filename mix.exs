@@ -92,6 +92,7 @@ defmodule GhEx.MixProject do
           GhEx.Stacks,
           GhEx.Repositories,
           GhEx.Contents,
+          GhEx.Git,
           GhEx.Releases,
           GhEx.Actions,
           GhEx.Search,

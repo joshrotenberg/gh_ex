@@ -11,6 +11,9 @@ defmodule GhEx.PullRequests do
 
   alias GhEx.{Client, REST}
 
+  @diff_media_type "application/vnd.github.diff"
+  @patch_media_type "application/vnd.github.patch"
+
   @type number_ref :: integer() | String.t()
 
   @doc """
@@ -35,6 +38,36 @@ defmodule GhEx.PullRequests do
   @spec get(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
   def get(client, owner, repo, number, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/pulls/#{number}", opts)
+  end
+
+  @doc """
+  Gets a pull request's unified diff as a string.
+
+  This forces GitHub's `application/vnd.github.diff` media type while
+  preserving any other request headers supplied through `opts`.
+  """
+  @spec get_diff(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
+  def get_diff(client, owner, repo, number, opts \\ []) do
+    REST.get(
+      client,
+      "/repos/#{owner}/#{repo}/pulls/#{number}",
+      with_accept(opts, @diff_media_type)
+    )
+  end
+
+  @doc """
+  Gets a pull request's mailbox-format patch as a string.
+
+  This forces GitHub's `application/vnd.github.patch` media type while
+  preserving any other request headers supplied through `opts`.
+  """
+  @spec get_patch(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
+  def get_patch(client, owner, repo, number, opts \\ []) do
+    REST.get(
+      client,
+      "/repos/#{owner}/#{repo}/pulls/#{number}",
+      with_accept(opts, @patch_media_type)
+    )
   end
 
   @doc "Creates a pull request. `attrs` is the JSON body (title, head, base, body, draft, ...)."
@@ -125,6 +158,68 @@ defmodule GhEx.PullRequests do
     REST.stream(client, "/repos/#{owner}/#{repo}/pulls/#{number}/files", opts)
   end
 
+  @doc """
+  Lists review comments on a pull request.
+
+  These are comments anchored to a diff, not issue comments from the pull
+  request's Conversation tab. Use `params:` for `sort`, `direction`, and
+  `since`.
+  """
+  @spec list_comments(Client.t(), String.t(), String.t(), number_ref(), keyword()) ::
+          REST.result()
+  def list_comments(client, owner, repo, number, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/pulls/#{number}/comments", opts)
+  end
+
+  @doc "Auto-paginates a pull request's review comments into a lazy `Stream`."
+  @spec stream_comments(Client.t(), String.t(), String.t(), number_ref(), keyword()) ::
+          Enumerable.t()
+  def stream_comments(client, owner, repo, number, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/pulls/#{number}/comments", opts)
+  end
+
+  @doc """
+  Creates a review comment anchored to a pull request diff.
+
+  `attrs` requires `body`, `commit_id`, and `path`. For a line comment, provide
+  `line` and `side` (`"LEFT"` or `"RIGHT"`). A multi-line comment also uses
+  `start_line` and `start_side`. For a file-level comment, set
+  `subject_type: "file"`; `line` is then optional. GitHub is closing down the
+  older `position` parameter, so prefer the line-based fields.
+  """
+  @spec create_comment(Client.t(), String.t(), String.t(), number_ref(), map(), keyword()) ::
+          REST.result()
+  def create_comment(client, owner, repo, number, attrs, opts \\ []) do
+    REST.post(
+      client,
+      "/repos/#{owner}/#{repo}/pulls/#{number}/comments",
+      Keyword.put(opts, :json, attrs)
+    )
+  end
+
+  @doc """
+  Replies to a top-level review comment.
+
+  GitHub does not support replies to replies; `comment_id` must identify the
+  top-level comment in the thread.
+  """
+  @spec reply_to_comment(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          number_ref(),
+          String.t(),
+          keyword()
+        ) :: REST.result()
+  def reply_to_comment(client, owner, repo, number, comment_id, body, opts \\ []) do
+    REST.post(
+      client,
+      "/repos/#{owner}/#{repo}/pulls/#{number}/comments/#{comment_id}/replies",
+      Keyword.put(opts, :json, %{body: body})
+    )
+  end
+
   @doc "Lists the reviews on a pull request."
   @spec list_reviews(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
   def list_reviews(client, owner, repo, number, opts \\ []) do
@@ -148,4 +243,12 @@ defmodule GhEx.PullRequests do
       Keyword.put(opts, :json, attrs)
     )
   end
+
+  defp with_accept(opts, media_type) do
+    Keyword.update(opts, :headers, [{"accept", media_type}], fn headers ->
+      [{"accept", media_type} | Enum.reject(headers, &accept_header?/1)]
+    end)
+  end
+
+  defp accept_header?({name, _value}), do: name |> to_string() |> String.downcase() == "accept"
 end

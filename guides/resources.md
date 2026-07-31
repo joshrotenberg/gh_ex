@@ -41,18 +41,23 @@ GhEx.Issues.add_labels(client, "o", "r", 7, ["bug", "p1"])
 ## Pull requests
 
 `GhEx.PullRequests` — list, get, create, update, synchronous and asynchronous
-merge, files, reviews. `GhEx.Stacks` — list, get, create, add, and unstack pull
-request stacks. See the [Stacked pull requests](stacks.md) guide for the
-asynchronous merge flow and GraphQL/webhook fields.
+merge, raw diff/patch, files, reviews, and line-anchored review comments.
+`GhEx.Stacks` — list, get, create, add, and unstack pull request stacks. See the
+[Stacked pull requests](stacks.md) guide for the asynchronous merge flow and
+GraphQL/webhook fields.
 
 ```elixir
 GhEx.PullRequests.create(client, "o", "r", %{title: "Fix", head: "fix", base: "main"})
 GhEx.PullRequests.list_files(client, "o", "r", 42)
+GhEx.PullRequests.get_diff(client, "o", "r", 42)
 GhEx.PullRequests.merge(client, "o", "r", 42, %{merge_method: "squash"})
 GhEx.PullRequests.create_review(client, "o", "r", 42, %{event: "APPROVE"})
-
 GhEx.Stacks.create(client, "o", "r", %{pull_requests: [41, 42]})
 GhEx.PullRequests.merge_async(client, "o", "r", 42, %{merge_action: "default"})
+
+GhEx.PullRequests.create_comment(client, "o", "r", 42, %{
+  body: "Please handle nil.", commit_id: sha, path: "lib/a.ex", line: 12, side: "RIGHT"
+})
 ```
 
 ## Repositories and contents

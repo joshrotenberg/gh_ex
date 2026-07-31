@@ -84,6 +84,80 @@ defmodule GhEx.PullRequestsTest do
              GhEx.PullRequests.merge(client(__MODULE__.MergeDefault), "o", "r", 7)
   end
 
+  test "merge_async/5 PUTs to the asynchronous merge endpoint" do
+    Req.Test.stub(__MODULE__.MergeAsync, fn conn ->
+      assert conn.method == "PUT"
+      assert conn.request_path == "/repos/o/r/pulls/7/merge-async"
+      assert body(conn) == %{"merge_action" => "default", "merge_method" => "squash"}
+
+      conn
+      |> Plug.Conn.put_status(202)
+      |> Req.Test.json(%{
+        "status" => "pending",
+        "details" => %{"uuid" => "merge-uuid"}
+      })
+    end)
+
+    assert {:ok, %{"status" => "pending", "details" => %{"uuid" => "merge-uuid"}}, meta} =
+             GhEx.PullRequests.merge_async(client(__MODULE__.MergeAsync), "o", "r", 7, %{
+               merge_action: "default",
+               merge_method: "squash"
+             })
+
+    assert meta.status == 202
+  end
+
+  test "merge_async/4 PUTs with an empty body by default" do
+    Req.Test.stub(__MODULE__.MergeAsyncDefault, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/7/merge-async"
+      assert body(conn) == %{}
+      conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{"status" => "pending"})
+    end)
+
+    assert {:ok, %{"status" => "pending"}, _} =
+             GhEx.PullRequests.merge_async(client(__MODULE__.MergeAsyncDefault), "o", "r", 7)
+  end
+
+  test "merge_async/5 preserves an existing pending request in a 409 error body" do
+    Req.Test.stub(__MODULE__.MergeAsyncConflict, fn conn ->
+      conn
+      |> Plug.Conn.put_status(409)
+      |> Req.Test.json(%{
+        "status" => "pending",
+        "details" => %{"uuid" => "existing-uuid"}
+      })
+    end)
+
+    assert {:error,
+            %GhEx.Error{
+              status: 409,
+              body: %{"status" => "pending", "details" => %{"uuid" => "existing-uuid"}}
+            }} =
+             GhEx.PullRequests.merge_async(
+               client(__MODULE__.MergeAsyncConflict),
+               "o",
+               "r",
+               7
+             )
+  end
+
+  test "get_merge_result/5 GETs the asynchronous merge result" do
+    Req.Test.stub(__MODULE__.MergeResult, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/pulls/7/merge-async/merge-uuid"
+      Req.Test.json(conn, %{"status" => "merged", "details" => %{"sha" => "abc123"}})
+    end)
+
+    assert {:ok, %{"status" => "merged", "details" => %{"sha" => "abc123"}}, _} =
+             GhEx.PullRequests.get_merge_result(
+               client(__MODULE__.MergeResult),
+               "o",
+               "r",
+               7,
+               "merge-uuid"
+             )
+  end
+
   test "list_files/4 GETs the changed files" do
     Req.Test.stub(__MODULE__.Files, fn conn ->
       assert conn.request_path == "/repos/o/r/pulls/7/files"

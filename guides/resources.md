@@ -157,11 +157,14 @@ GhEx.Activity.star(client, "o", "r")
 
 ## Checks and statuses
 
-`GhEx.Checks` — check runs. `GhEx.Statuses` — commit statuses.
+`GhEx.Checks` — check runs, annotations, and run rerequests. `GhEx.Statuses` —
+commit statuses.
 
 ```elixir
 GhEx.Checks.create_run(client, "o", "r", %{name: "lint", head_sha: sha, status: "in_progress"})
 GhEx.Checks.list_for_ref(client, "o", "r", sha)
+GhEx.Checks.stream_annotations(client, "o", "r", check_run_id) |> Enum.take(100)
+GhEx.Checks.rerequest_run(client, "o", "r", check_run_id)
 
 GhEx.Statuses.create(client, "o", "r", sha, %{state: "success", context: "ci/lint"})
 GhEx.Statuses.get_combined(client, "o", "r", "main")

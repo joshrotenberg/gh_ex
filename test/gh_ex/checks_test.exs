@@ -49,6 +49,47 @@ defmodule GhEx.ChecksTest do
              })
   end
 
+  test "list_annotations/4 GETs annotations for a check run" do
+    Req.Test.stub(__MODULE__.ListAnnotations, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/check-runs/42/annotations"
+      assert conn.query_string == "per_page=50"
+      Req.Test.json(conn, [%{"path" => "lib/a.ex", "start_line" => 12}])
+    end)
+
+    assert {:ok, [%{"path" => "lib/a.ex"}], _} =
+             GhEx.Checks.list_annotations(client(__MODULE__.ListAnnotations), "o", "r", 42,
+               params: [per_page: 50]
+             )
+  end
+
+  test "stream_annotations/4 auto-paginates check-run annotations" do
+    Req.Test.stub(__MODULE__.StreamAnnotations, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/check-runs/42/annotations"
+      Req.Test.json(conn, [%{"path" => "lib/a.ex", "annotation_level" => "failure"}])
+    end)
+
+    assert client(__MODULE__.StreamAnnotations)
+           |> GhEx.Checks.stream_annotations("o", "r", 42)
+           |> Enum.to_list() == [%{"path" => "lib/a.ex", "annotation_level" => "failure"}]
+  end
+
+  test "rerequest_run/4 POSTs without a request body" do
+    Req.Test.stub(__MODULE__.RerequestRun, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/check-runs/42/rerequest"
+      {:ok, raw, conn} = Plug.Conn.read_body(conn)
+      assert raw == ""
+      Plug.Conn.send_resp(conn, 201, "")
+    end)
+
+    assert {:ok, response, %{status: 201}} =
+             GhEx.Checks.rerequest_run(client(__MODULE__.RerequestRun), "o", "r", 42)
+
+    assert response in ["", nil]
+  end
+
   test "list_for_ref/4 GETs check runs for a ref" do
     Req.Test.stub(__MODULE__.ListForRef, fn conn ->
       assert conn.request_path == "/repos/o/r/commits/main/check-runs"

@@ -77,11 +77,19 @@ GhEx.PullRequests.create_comment(client, "o", "r", 42, %{
 ## Repositories and contents
 
 `GhEx.Repositories` — get, list (org/user), create, update, delete, commits,
-branches. `GhEx.Contents` — read and write files.
+branches, and ETag-conditional event polling. `GhEx.Contents` — read and write
+files.
 
 ```elixir
 GhEx.Repositories.get(client, "elixir-lang", "elixir")
 GhEx.Repositories.list_for_org(client, "elixir-lang", params: [type: "public"])
+
+{:ok, events, meta} = GhEx.Repositories.events(client, "o", "r")
+
+case GhEx.Repositories.events(client, "o", "r", headers: [{"if-none-match", meta.etag}]) do
+  {:ok, :not_modified, poll_meta} -> poll_meta.headers["x-poll-interval"]
+  {:ok, new_events, poll_meta} -> {new_events, poll_meta.etag}
+end
 
 {:ok, file, _meta} = GhEx.Contents.get(client, "o", "r", "mix.exs", params: [ref: "main"])
 

@@ -97,6 +97,45 @@ defmodule GhEx.RepositoriesTest do
              GhEx.Repositories.list_branches(client(__MODULE__.Branches), "o", "r")
   end
 
+  test "events/3 surfaces the ETag and polling interval" do
+    Req.Test.stub(__MODULE__.Events, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/events"
+
+      conn
+      |> Plug.Conn.put_resp_header("etag", ~s("events-v1"))
+      |> Plug.Conn.put_resp_header("x-poll-interval", "60")
+      |> Req.Test.json([%{"id" => "1", "type" => "PushEvent"}])
+    end)
+
+    assert {:ok, [%{"id" => "1", "type" => "PushEvent"}], meta} =
+             GhEx.Repositories.events(client(__MODULE__.Events), "o", "r")
+
+    assert meta.etag == ~s("events-v1")
+    assert meta.headers["x-poll-interval"] == ["60"]
+  end
+
+  test "events/4 returns :not_modified for a matching ETag" do
+    Req.Test.stub(__MODULE__.EventsNotModified, fn conn ->
+      assert conn.request_path == "/repos/o/r/events"
+      assert Plug.Conn.get_req_header(conn, "if-none-match") == [~s("events-v1")]
+
+      conn
+      |> Plug.Conn.put_resp_header("etag", ~s("events-v1"))
+      |> Plug.Conn.put_resp_header("x-poll-interval", "90")
+      |> Plug.Conn.send_resp(304, "")
+    end)
+
+    assert {:ok, :not_modified, meta} =
+             GhEx.Repositories.events(client(__MODULE__.EventsNotModified), "o", "r",
+               headers: [{"if-none-match", ~s("events-v1")}]
+             )
+
+    assert meta.status == 304
+    assert meta.etag == ~s("events-v1")
+    assert meta.headers["x-poll-interval"] == ["90"]
+  end
+
   test "stream_for_org/3 auto-paginates org repositories" do
     Req.Test.stub(__MODULE__.StreamOrg, fn conn ->
       assert conn.request_path == "/orgs/acme/repos"
@@ -139,5 +178,17 @@ defmodule GhEx.RepositoriesTest do
     assert client(__MODULE__.StreamBranches)
            |> GhEx.Repositories.stream_branches("o", "r")
            |> Enum.to_list() == [%{"name" => "main"}]
+  end
+
+  test "stream_events/3 auto-paginates repository events" do
+    Req.Test.stub(__MODULE__.StreamEvents, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/events"
+      Req.Test.json(conn, [%{"id" => "1", "type" => "PushEvent"}])
+    end)
+
+    assert client(__MODULE__.StreamEvents)
+           |> GhEx.Repositories.stream_events("o", "r")
+           |> Enum.to_list() == [%{"id" => "1", "type" => "PushEvent"}]
   end
 end

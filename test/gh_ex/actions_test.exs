@@ -136,6 +136,97 @@ defmodule GhEx.ActionsTest do
     assert {:ok, %{"id" => 9}, _} = GhEx.Actions.get_run(client(__MODULE__.Run), "o", "r", 9)
   end
 
+  test "list_pending_deployments/4 GETs environments awaiting review" do
+    Req.Test.stub(__MODULE__.PendingDeployments, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/actions/runs/9/pending_deployments"
+      Req.Test.json(conn, [%{"environment" => %{"id" => 42}}])
+    end)
+
+    assert {:ok, [%{"environment" => %{"id" => 42}}], _} =
+             GhEx.Actions.list_pending_deployments(
+               client(__MODULE__.PendingDeployments),
+               "o",
+               "r",
+               9
+             )
+  end
+
+  test "review_pending_deployments/5 POSTs a deployment review" do
+    Req.Test.stub(__MODULE__.ReviewPendingDeployments, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/actions/runs/9/pending_deployments"
+
+      assert body(conn) == %{
+               "environment_ids" => [42],
+               "state" => "approved",
+               "comment" => "Ship it"
+             }
+
+      Req.Test.json(conn, [%{"state" => "approved"}])
+    end)
+
+    attrs = %{environment_ids: [42], state: "approved", comment: "Ship it"}
+
+    assert {:ok, [%{"state" => "approved"}], _} =
+             GhEx.Actions.review_pending_deployments(
+               client(__MODULE__.ReviewPendingDeployments),
+               "o",
+               "r",
+               9,
+               attrs
+             )
+  end
+
+  test "list_run_approvals/4 GETs deployment review history" do
+    Req.Test.stub(__MODULE__.RunApprovals, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/actions/runs/9/approvals"
+      Req.Test.json(conn, [%{"state" => "approved"}])
+    end)
+
+    assert {:ok, [%{"state" => "approved"}], _} =
+             GhEx.Actions.list_run_approvals(client(__MODULE__.RunApprovals), "o", "r", 9)
+  end
+
+  test "approve_run/4 POSTs a bodyless fork-run approval" do
+    Req.Test.stub(__MODULE__.ApproveRun, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/actions/runs/9/approve"
+      assert {:ok, "", _conn} = Plug.Conn.read_body(conn)
+      Plug.Conn.send_resp(conn, 201, "")
+    end)
+
+    assert {:ok, _body, %{status: 201}} =
+             GhEx.Actions.approve_run(client(__MODULE__.ApproveRun), "o", "r", 9)
+  end
+
+  test "review_deployment_protection_rule/5 POSTs a custom-rule decision" do
+    Req.Test.stub(__MODULE__.ReviewProtectionRule, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/actions/runs/9/deployment_protection_rule"
+
+      assert body(conn) == %{
+               "environment_name" => "production",
+               "state" => "approved",
+               "comment" => "Checks passed"
+             }
+
+      Plug.Conn.send_resp(conn, 204, "")
+    end)
+
+    attrs = %{environment_name: "production", state: "approved", comment: "Checks passed"}
+
+    assert {:ok, _body, %{status: 204}} =
+             GhEx.Actions.review_deployment_protection_rule(
+               client(__MODULE__.ReviewProtectionRule),
+               "o",
+               "r",
+               9,
+               attrs
+             )
+  end
+
   test "list_run_artifacts/4 GETs artifacts for one run" do
     Req.Test.stub(__MODULE__.RunArtifacts, fn conn ->
       assert conn.request_path == "/repos/o/r/actions/runs/9/artifacts"

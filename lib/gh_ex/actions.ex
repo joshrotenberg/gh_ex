@@ -124,6 +124,79 @@ defmodule GhEx.Actions do
     REST.get(client, "/repos/#{owner}/#{repo}/actions/runs/#{run_id}", opts)
   end
 
+  @doc """
+  Lists deployment environments waiting for protection rules on a workflow run.
+
+  Each item describes an environment, its protection rules, and whether the
+  authenticated user can approve it.
+  """
+  @spec list_pending_deployments(Client.t(), String.t(), String.t(), id(), keyword()) ::
+          REST.result()
+  def list_pending_deployments(client, owner, repo, run_id, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/pending_deployments", opts)
+  end
+
+  @doc """
+  Approves or rejects pending deployments for a workflow run.
+
+  `attrs` must contain `environment_ids`, a `state` of `"approved"` or
+  `"rejected"`, and a `comment`.
+  """
+  @spec review_pending_deployments(
+          Client.t(),
+          String.t(),
+          String.t(),
+          id(),
+          map(),
+          keyword()
+        ) :: REST.result()
+  def review_pending_deployments(client, owner, repo, run_id, attrs, opts \\ []) do
+    REST.post(
+      client,
+      "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/pending_deployments",
+      Keyword.put(opts, :json, attrs)
+    )
+  end
+
+  @doc "Returns the deployment review history for a workflow run."
+  @spec list_run_approvals(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
+  def list_run_approvals(client, owner, repo, run_id, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/approvals", opts)
+  end
+
+  @doc """
+  Approves a workflow run from a first-time contributor's public fork.
+
+  GitHub returns `201 Created` when the approval succeeds.
+  """
+  @spec approve_run(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
+  def approve_run(client, owner, repo, run_id, opts \\ []) do
+    REST.post(client, "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/approve", opts)
+  end
+
+  @doc """
+  Approves or rejects a custom deployment protection rule for a workflow run.
+
+  `attrs` must contain `environment_name`, a `state` of `"approved"` or
+  `"rejected"`, and a `comment`. GitHub Apps can review only their own custom
+  protection rules.
+  """
+  @spec review_deployment_protection_rule(
+          Client.t(),
+          String.t(),
+          String.t(),
+          id(),
+          map(),
+          keyword()
+        ) :: REST.result()
+  def review_deployment_protection_rule(client, owner, repo, run_id, attrs, opts \\ []) do
+    REST.post(
+      client,
+      "/repos/#{owner}/#{repo}/actions/runs/#{run_id}/deployment_protection_rule",
+      Keyword.put(opts, :json, attrs)
+    )
+  end
+
   @doc "Lists the artifacts produced by one workflow run."
   @spec list_run_artifacts(Client.t(), String.t(), String.t(), id(), keyword()) :: REST.result()
   def list_run_artifacts(client, owner, repo, run_id, opts \\ []) do

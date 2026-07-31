@@ -135,15 +135,22 @@ GhEx.Releases.create(client, "o", "r", %{
 
 ## Actions
 
-`GhEx.Actions` — workflows, runs, jobs, artifacts, logs, dispatch, cancel, and
-rerun. A workflow is its numeric id or its file name (`"ci.yml"`). Artifact and
-run-log downloads return ZIP bytes; job-log downloads return plain-text bytes.
+`GhEx.Actions` — workflows, runs, jobs, artifacts, logs, dispatch, deployment
+approvals, cancel, and rerun. A workflow is its numeric id or its file name
+(`"ci.yml"`). Artifact and run-log downloads return ZIP bytes; job-log downloads
+return plain-text bytes.
 
 ```elixir
 GhEx.Actions.list_workflows(client, "o", "r")
 GhEx.Actions.dispatch_workflow(client, "o", "r", "ci.yml", %{ref: "main", inputs: %{env: "prod"}})
 GhEx.Actions.list_runs(client, "o", "r", params: [branch: "main", status: "failure"])
 GhEx.Actions.rerun(client, "o", "r", run_id)
+GhEx.Actions.list_pending_deployments(client, "o", "r", run_id)
+GhEx.Actions.review_pending_deployments(client, "o", "r", run_id, %{
+  environment_ids: [environment_id],
+  state: "approved",
+  comment: "Ship it"
+})
 {:ok, zip_bytes, _meta} = GhEx.Actions.download_artifact(client, "o", "r", artifact_id, "zip")
 {:ok, logs, _meta} = GhEx.Actions.download_job_logs(client, "o", "r", job_id)
 GhEx.Actions.rerun_failed_jobs(client, "o", "r", run_id)

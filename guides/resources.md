@@ -3,8 +3,10 @@
 The convenience modules are thin wrappers over `GhEx.REST` that fill in the
 endpoint path. Each function returns the same `{:ok, body, meta}` /
 `{:error, reason}` shape as the core and passes `opts` through to `Req` (so
-`:params`, headers, and a `Req.Test` plug all work). They cover the
-common paths; for anything else, call `GhEx.REST` directly.
+`:params`, headers, and a `Req.Test` plug all work). They cover the common paths;
+for anything else, call `GhEx.REST` directly or follow the
+[Extending gh_ex](extending.md) guide to build an application-owned resource
+module.
 
 On the write wrappers (`create`, `update`, `merge`, and the like), the `attrs`
 argument is the sole request body: each sets `:json` to `attrs`, so a `:json`

@@ -70,6 +70,7 @@ defmodule GhEx.MixProject do
         "README.md",
         "guides/getting-started.md",
         "guides/resources.md",
+        "guides/extending.md",
         "guides/authentication.md",
         "guides/pagination.md",
         "guides/notifications.md",

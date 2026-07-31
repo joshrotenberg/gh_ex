@@ -78,13 +78,16 @@ GhEx.PullRequests.create_comment(client, "o", "r", 42, %{
 
 ## Repositories and contents
 
-`GhEx.Repositories` — get, list (org/user), create, update, delete, commits,
-branches, and ETag-conditional event polling. `GhEx.Contents` — read and write
-files.
+`GhEx.Repositories` — get, list (org/user), create, update, delete, collaborator
+authorization, commits, branches, and ETag-conditional event polling.
+`GhEx.Contents` — read and write files.
 
 ```elixir
 GhEx.Repositories.get(client, "elixir-lang", "elixir")
 GhEx.Repositories.list_for_org(client, "elixir-lang", params: [type: "public"])
+
+{:ok, is_collaborator, _meta} = GhEx.Repositories.is_collaborator(client, "o", "r", actor)
+{:ok, permission, _meta} = GhEx.Repositories.get_collaborator_permission(client, "o", "r", actor)
 
 {:ok, events, meta} = GhEx.Repositories.events(client, "o", "r")
 

@@ -89,4 +89,45 @@ defmodule GhEx.Issues do
       Keyword.put(opts, :json, %{labels: labels})
     )
   end
+
+  @doc """
+  Removes one label from an issue.
+
+  Label names are percent-encoded as a single path segment, so names containing
+  spaces, slashes, or other reserved characters are safe to pass directly.
+  """
+  @spec remove_label(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          String.t(),
+          keyword()
+        ) :: REST.result()
+  def remove_label(client, owner, repo, number, name, opts \\ []) do
+    REST.delete(
+      client,
+      "/repos/#{owner}/#{repo}/issues/#{number}/labels/#{encode_segment(name)}",
+      opts
+    )
+  end
+
+  @doc "Replaces every label on an issue. Pass an empty list to remove all labels."
+  @spec replace_all_labels(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          [String.t()],
+          keyword()
+        ) :: REST.result()
+  def replace_all_labels(client, owner, repo, number, labels, opts \\ []) do
+    REST.put(
+      client,
+      "/repos/#{owner}/#{repo}/issues/#{number}/labels",
+      Keyword.put(opts, :json, %{labels: labels})
+    )
+  end
+
+  defp encode_segment(value), do: URI.encode(value, &URI.char_unreserved?/1)
 end

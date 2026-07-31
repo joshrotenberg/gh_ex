@@ -105,6 +105,58 @@ defmodule GhEx.IssuesTest do
              GhEx.Issues.add_labels(client(__MODULE__.Labels), "o", "r", 7, ["bug", "p1"])
   end
 
+  test "remove_label/5 DELETEs one percent-encoded label" do
+    Req.Test.stub(__MODULE__.RemoveLabel, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/repos/o/r/issues/7/labels/needs%20triage%2Furgent"
+      Req.Test.json(conn, [%{"name" => "bug"}])
+    end)
+
+    assert {:ok, [%{"name" => "bug"}], _} =
+             GhEx.Issues.remove_label(
+               client(__MODULE__.RemoveLabel),
+               "o",
+               "r",
+               7,
+               "needs triage/urgent"
+             )
+  end
+
+  test "replace_all_labels/5 PUTs the complete label list" do
+    Req.Test.stub(__MODULE__.ReplaceLabels, fn conn ->
+      assert conn.method == "PUT"
+      assert conn.request_path == "/repos/o/r/issues/7/labels"
+      assert body(conn) == %{"labels" => ["bug", "p1"]}
+      Req.Test.json(conn, [%{"name" => "bug"}, %{"name" => "p1"}])
+    end)
+
+    assert {:ok, [%{"name" => "bug"}, %{"name" => "p1"}], _} =
+             GhEx.Issues.replace_all_labels(
+               client(__MODULE__.ReplaceLabels),
+               "o",
+               "r",
+               7,
+               ["bug", "p1"]
+             )
+  end
+
+  test "replace_all_labels/5 ignores a caller-supplied :json body" do
+    Req.Test.stub(__MODULE__.ReplaceLabelsJsonIgnored, fn conn ->
+      assert body(conn) == %{"labels" => []}
+      Req.Test.json(conn, [])
+    end)
+
+    assert {:ok, [], _} =
+             GhEx.Issues.replace_all_labels(
+               client(__MODULE__.ReplaceLabelsJsonIgnored),
+               "o",
+               "r",
+               7,
+               [],
+               json: %{labels: ["caller override"]}
+             )
+  end
+
   test "stream/3 auto-paginates repo issues" do
     Req.Test.stub(__MODULE__.Stream, fn conn ->
       assert conn.request_path == "/repos/o/r/issues"

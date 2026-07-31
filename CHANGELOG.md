@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 semantic versioning.
 
+## [0.3.4](https://github.com/joshrotenberg/gh_ex/compare/v0.3.3...v0.3.4) (2026-07-31)
+
+
+### Features
+
+* add Actions deployment approval helpers ([#144](https://github.com/joshrotenberg/gh_ex/issues/144)) ([82c2387](https://github.com/joshrotenberg/gh_ex/commit/82c2387a999db3877ab5667f307669d0ae87dda5)), closes [#121](https://github.com/joshrotenberg/gh_ex/issues/121)
+* add check failure-triage helpers ([#139](https://github.com/joshrotenberg/gh_ex/issues/139)) ([180483c](https://github.com/joshrotenberg/gh_ex/commit/180483c0dcdcf0339949ec38a5a2120c95720536))
+* add check-run lookup by app and name ([#140](https://github.com/joshrotenberg/gh_ex/issues/140)) ([b649abd](https://github.com/joshrotenberg/gh_ex/commit/b649abda86def83f1a14bfcef6f8b06e916cccc1))
+* add code security alerts ([#150](https://github.com/joshrotenberg/gh_ex/issues/150)) ([e4ddcbd](https://github.com/joshrotenberg/gh_ex/commit/e4ddcbde55e7c23f6cb37a4f5e0c02d037d3b026))
+* add collaborator authorization helpers ([#151](https://github.com/joshrotenberg/gh_ex/issues/151)) ([e57305d](https://github.com/joshrotenberg/gh_ex/commit/e57305d900c6b236f032a6a219a56a9db533886e))
+* add deployments and deployment statuses ([#145](https://github.com/joshrotenberg/gh_ex/issues/145)) ([723bb3e](https://github.com/joshrotenberg/gh_ex/commit/723bb3ed5b1b789daf23ec75356e616de8502561)), closes [#126](https://github.com/joshrotenberg/gh_ex/issues/126)
+* add GhEx.Error.classify/1 and retryable?/1 ([#129](https://github.com/joshrotenberg/gh_ex/issues/129)) ([8364294](https://github.com/joshrotenberg/gh_ex/commit/8364294e431e858eef080735b7c41a7f15992278)), closes [#124](https://github.com/joshrotenberg/gh_ex/issues/124)
+* add issue comment and assignee helpers ([#142](https://github.com/joshrotenberg/gh_ex/issues/142)) ([7824858](https://github.com/joshrotenberg/gh_ex/commit/78248588daa858a395ab271af3d75505d02599e9))
+* add pull request merge-flow helpers ([#138](https://github.com/joshrotenberg/gh_ex/issues/138)) ([1b14542](https://github.com/joshrotenberg/gh_ex/commit/1b1454281311d1a873c02050a5ce0e310cb5bc8f))
+* add release asset upload ([#146](https://github.com/joshrotenberg/gh_ex/issues/146)) ([8b3ba45](https://github.com/joshrotenberg/gh_ex/commit/8b3ba452a760cc9288ae1b619a53dc30b45cec19)), closes [#118](https://github.com/joshrotenberg/gh_ex/issues/118)
+* add repository event polling ([#147](https://github.com/joshrotenberg/gh_ex/issues/147)) ([70f91e9](https://github.com/joshrotenberg/gh_ex/commit/70f91e918d75341bf3a5621f7d71f6d7b2266dbd)), closes [#120](https://github.com/joshrotenberg/gh_ex/issues/120)
+* add repository hook management ([#149](https://github.com/joshrotenberg/gh_ex/issues/149)) ([0736385](https://github.com/joshrotenberg/gh_ex/commit/0736385a642e53f5cb1ced6f87c572e87522395f))
+* add repository label management ([#143](https://github.com/joshrotenberg/gh_ex/issues/143)) ([7780923](https://github.com/joshrotenberg/gh_ex/commit/7780923ec2292da8af6ca6a0cdf0ee165027fddb))
+* add Req.Test testing helpers ([#141](https://github.com/joshrotenberg/gh_ex/issues/141)) ([4e25a9a](https://github.com/joshrotenberg/gh_ex/commit/4e25a9ad8b8072da7102aee83c1b67b2e1eb9c4a))
+
+
+### Bug Fixes
+
+* provide repository context to release CLI commands ([#154](https://github.com/joshrotenberg/gh_ex/issues/154)) ([0e93bb5](https://github.com/joshrotenberg/gh_ex/commit/0e93bb53c8c71f87690d27eef98b9c143e73009f))
+* scope release CI dispatch to the repository ([#153](https://github.com/joshrotenberg/gh_ex/issues/153)) ([f709ce2](https://github.com/joshrotenberg/gh_ex/commit/f709ce2d4623c6b862a4cc79ac035f9bae1c51bd))
+
 ## [0.3.3](https://github.com/joshrotenberg/gh_ex/compare/v0.3.2...v0.3.3) (2026-07-01)
 
 

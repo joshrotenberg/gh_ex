@@ -121,7 +121,8 @@ defmodule GhEx.MixProject do
           GhEx.Error,
           GhEx.REST.Meta,
           GhEx.GraphQL.Meta
-        ]
+        ],
+        Testing: [GhEx.Testing]
       ]
     ]
   end

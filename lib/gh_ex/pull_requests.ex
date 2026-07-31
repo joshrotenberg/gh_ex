@@ -84,6 +84,20 @@ defmodule GhEx.PullRequests do
   end
 
   @doc """
+  Checks whether a pull request has been merged.
+
+  Returns `{:ok, true, meta}` for GitHub's `204` response and
+  `{:ok, false, meta}` for its `404` response. Other failures retain the
+  standard `{:error, reason}` shape.
+  """
+  @spec is_merged(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
+  # GitHub's endpoint and issue #116 deliberately use the `is_merged` name.
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
+  def is_merged(client, owner, repo, number, opts \\ []) do
+    REST.present?(client, "/repos/#{owner}/#{repo}/pulls/#{number}/merge", opts)
+  end
+
+  @doc """
   Merges a standalone pull request using GitHub's legacy synchronous endpoint.
 
   `attrs` may set `commit_title`, `commit_message`, and `merge_method`
@@ -143,6 +157,19 @@ defmodule GhEx.PullRequests do
         ) :: REST.result()
   def get_merge_result(client, owner, repo, number, uuid, opts \\ []) do
     REST.get(client, "/repos/#{owner}/#{repo}/pulls/#{number}/merge-async/#{uuid}", opts)
+  end
+
+  @doc "Lists the commits on a pull request. GitHub returns at most 250 commits."
+  @spec list_commits(Client.t(), String.t(), String.t(), number_ref(), keyword()) :: REST.result()
+  def list_commits(client, owner, repo, number, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/pulls/#{number}/commits", opts)
+  end
+
+  @doc "Auto-paginates the commits on a pull request into a lazy `Stream`."
+  @spec stream_commits(Client.t(), String.t(), String.t(), number_ref(), keyword()) ::
+          Enumerable.t()
+  def stream_commits(client, owner, repo, number, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/pulls/#{number}/commits", opts)
   end
 
   @doc "Lists the files changed in a pull request."
@@ -217,6 +244,44 @@ defmodule GhEx.PullRequests do
       client,
       "/repos/#{owner}/#{repo}/pulls/#{number}/comments/#{comment_id}/replies",
       Keyword.put(opts, :json, %{body: body})
+    )
+  end
+
+  @doc """
+  Requests reviews from users and/or teams.
+
+  `attrs` may contain `reviewers`, an array of user logins, and
+  `team_reviewers`, an array of team slugs.
+  """
+  @spec request_reviewers(Client.t(), String.t(), String.t(), number_ref(), map(), keyword()) ::
+          REST.result()
+  def request_reviewers(client, owner, repo, number, attrs, opts \\ []) do
+    REST.post(
+      client,
+      "/repos/#{owner}/#{repo}/pulls/#{number}/requested_reviewers",
+      Keyword.put(opts, :json, attrs)
+    )
+  end
+
+  @doc """
+  Removes review requests from users and/or teams.
+
+  `attrs` accepts the same `reviewers` and `team_reviewers` arrays as
+  `request_reviewers/6`.
+  """
+  @spec remove_requested_reviewers(
+          Client.t(),
+          String.t(),
+          String.t(),
+          number_ref(),
+          map(),
+          keyword()
+        ) :: REST.result()
+  def remove_requested_reviewers(client, owner, repo, number, attrs, opts \\ []) do
+    REST.delete(
+      client,
+      "/repos/#{owner}/#{repo}/pulls/#{number}/requested_reviewers",
+      Keyword.put(opts, :json, attrs)
     )
   end
 

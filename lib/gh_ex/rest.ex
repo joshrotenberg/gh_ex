@@ -85,6 +85,20 @@ defmodule GhEx.REST do
   def delete(client, path, opts \\ []), do: request(client, :delete, path, opts)
 
   @doc """
+  Checks whether a resource exists when its `GET` endpoint uses `404` for an
+  expected absence.
+
+  Returns `{:ok, true, meta}` for any `2xx` response and
+  `{:ok, false, meta}` for `404`. A conditional `304` remains
+  `{:ok, :not_modified, meta}`. All other responses and transport failures use
+  the usual `{:error, reason}` shape.
+  """
+  @spec present?(Client.t(), String.t(), keyword()) :: result()
+  def present?(client, path, opts \\ []) do
+    request(client, :get, path, opts, &handle_presence/1)
+  end
+
+  @doc """
   Runs a request and returns the raw `Req.Response`, without normalizing it.
 
   Unlike the verb functions, a non-2xx response comes back as
@@ -223,7 +237,9 @@ defmodule GhEx.REST do
   # fires only on an unexpected raise (a normalized API/transport error comes
   # back as `{:error, _}` and is reported on `:stop`). The result tuple is
   # returned unchanged, so the `{:ok, body, meta} | {:error, reason}` shape holds.
-  defp request(client, method, path, opts) do
+  defp request(client, method, path, opts), do: request(client, method, path, opts, &handle/1)
+
+  defp request(client, method, path, opts, response_handler) do
     start_metadata = %{method: method, path: path}
 
     :telemetry.span([:gh_ex, :request], start_metadata, fn ->
@@ -232,7 +248,7 @@ defmodule GhEx.REST do
           client
           |> Request.build(method, path, opts)
           |> Req.request()
-          |> handle()
+          |> response_handler.()
         end
 
       {result, Map.merge(start_metadata, stop_metadata(result))}
@@ -258,6 +274,18 @@ defmodule GhEx.REST do
 
   defp handle({:ok, %Req.Response{} = resp}), do: {:error, Error.from_response(resp)}
   defp handle({:error, exception}), do: {:error, exception}
+
+  defp handle_presence({:ok, %Req.Response{status: 304} = resp}),
+    do: {:ok, :not_modified, meta(resp)}
+
+  defp handle_presence({:ok, %Req.Response{status: 404} = resp}),
+    do: {:ok, false, meta(resp)}
+
+  defp handle_presence({:ok, %Req.Response{status: status} = resp}) when status in 200..299,
+    do: {:ok, true, meta(resp)}
+
+  defp handle_presence({:ok, %Req.Response{} = resp}), do: {:error, Error.from_response(resp)}
+  defp handle_presence({:error, exception}), do: {:error, exception}
 
   defp meta(%Req.Response{} = resp) do
     %GhEx.REST.Meta{

@@ -81,4 +81,29 @@ defmodule GhEx.Repositories do
   def stream_branches(client, owner, repo, opts \\ []) do
     REST.stream(client, "/repos/#{owner}/#{repo}/branches", opts)
   end
+
+  @doc """
+  Lists activity events for a repository.
+
+  GitHub optimizes event feeds for conditional polling. Store `meta.etag` from a
+  successful response and send it back with
+  `headers: [{"if-none-match", etag}]`; an unchanged feed returns
+  `{:ok, :not_modified, meta}` without consuming the primary rate limit. The
+  current polling interval remains available in `meta.headers["x-poll-interval"]`.
+  """
+  @spec events(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
+  def events(client, owner, repo, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/events", opts)
+  end
+
+  @doc """
+  Auto-paginates a repository's activity events into a lazy `Stream`.
+
+  Use `events/4` instead when implementing an ETag-conditional polling loop,
+  because a stream yields events rather than response metadata.
+  """
+  @spec stream_events(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_events(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/events", opts)
+  end
 end

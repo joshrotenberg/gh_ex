@@ -39,6 +39,7 @@ jobs:
       - name: Run CI for the release PR head
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           branch=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open \
             --label "autorelease: pending" --json headRefName --jq '.[0].headRefName // empty')

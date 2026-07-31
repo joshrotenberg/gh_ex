@@ -138,6 +138,19 @@ GhEx.Actions.rerun(client, "o", "r", run_id)
 GhEx.Actions.rerun_failed_jobs(client, "o", "r", run_id)
 ```
 
+## Activity
+
+`GhEx.Activity` — repository, organization, user, and public event feeds plus
+repository starring. Each feed/list has a lazy stream companion. Watching stays
+separate from starring and is not part of this module.
+
+```elixir
+GhEx.Activity.stream_repo_events(client, "o", "r") |> Enum.take(100)
+GhEx.Activity.list_starred(client, "octocat")
+{:ok, starred?, _meta} = GhEx.Activity.starred?(client, "o", "r")
+GhEx.Activity.star(client, "o", "r")
+```
+
 ## Checks and statuses
 
 `GhEx.Checks` — check runs. `GhEx.Statuses` — commit statuses.

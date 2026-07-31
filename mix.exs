@@ -74,6 +74,7 @@ defmodule GhEx.MixProject do
         "guides/pagination.md",
         "guides/notifications.md",
         "guides/webhooks.md",
+        "guides/stacks.md",
         "guides/error-handling.md",
         "guides/github-enterprise-server.md",
         "guides/testing.md",
@@ -88,6 +89,7 @@ defmodule GhEx.MixProject do
         Resources: [
           GhEx.Issues,
           GhEx.PullRequests,
+          GhEx.Stacks,
           GhEx.Repositories,
           GhEx.Contents,
           GhEx.Releases,

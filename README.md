@@ -111,12 +111,13 @@ client
 
 ### Convenience modules
 
-`GhEx.Issues` and `GhEx.PullRequests` wrap the common paths and return the same
-shape as the core:
+`GhEx.Issues`, `GhEx.PullRequests`, and `GhEx.Stacks` wrap common paths and
+return the same shape as the core:
 
 ```elixir
 GhEx.Issues.list(client, "elixir-lang", "elixir", params: [state: "open"])
 GhEx.PullRequests.create(client, "o", "r", %{title: "Fix", head: "fix", base: "main"})
+GhEx.Stacks.create(client, "o", "r", %{pull_requests: [41, 42]})
 ```
 
 ## Authentication

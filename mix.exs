@@ -104,6 +104,7 @@ defmodule GhEx.MixProject do
           GhEx.Organizations,
           GhEx.Teams,
           GhEx.Checks,
+          GhEx.CodeSecurity,
           GhEx.Statuses,
           GhEx.Gists,
           GhEx.Hooks,

@@ -229,6 +229,23 @@ GhEx.Statuses.create(client, "o", "r", sha, %{state: "success", context: "ci/lin
 GhEx.Statuses.get_combined(client, "o", "r", "main")
 ```
 
+## Security alerts
+
+`GhEx.CodeSecurity` covers repository code-scanning, Dependabot, and
+secret-scanning alerts. The corresponding security feature must be available
+and enabled, and the token needs the matching repository alert permission.
+Updates require write permission.
+
+```elixir
+GhEx.CodeSecurity.list_alerts(client, "o", "r", params: [state: "open"])
+GhEx.CodeSecurity.stream_dependabot_alerts(client, "o", "r") |> Enum.take(100)
+GhEx.CodeSecurity.get_secret_alert(client, "o", "r", alert_number, params: [hide_secret: true])
+GhEx.CodeSecurity.update_alert(client, "o", "r", alert_number, %{
+  state: "dismissed",
+  dismissed_reason: "false positive"
+})
+```
+
 ## Search
 
 `GhEx.Search` — repositories, code, issues_and_pull_requests, users, commits. The

@@ -91,6 +91,7 @@ defmodule GhEx.MixProject do
           GhEx.PullRequests,
           GhEx.Stacks,
           GhEx.Repositories,
+          GhEx.Commits,
           GhEx.Contents,
           GhEx.Git,
           GhEx.Releases,

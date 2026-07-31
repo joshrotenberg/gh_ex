@@ -11,8 +11,8 @@ defmodule GhEx.Error do
   tuple can `raise` it.
 
   `classify/1` and `retryable?/1` sort an already-returned error (a
-  `GhEx.Error` or the raw transport exception `GhEx.REST.result/0` and
-  `GhEx.GraphQL.result/0` can also carry) into a coarse taxonomy, for a
+  `GhEx.Error` or the raw transport exception `t:GhEx.REST.result/0` and
+  `t:GhEx.GraphQL.result/0` can also carry) into a coarse taxonomy, for a
   caller such as a job queue deciding whether to retry, back off, or discard.
   """
 
@@ -115,8 +115,8 @@ defmodule GhEx.Error do
   Classifies an error into a `t:classification/0`.
 
   Accepts a `%GhEx.Error{}` or the raw transport exception a REST or GraphQL
-  call's error arm can carry instead (`GhEx.REST.result/0`,
-  `GhEx.GraphQL.result/0`). The `403` disambiguation (rate limit vs plain
+  call's error arm can carry instead (`t:GhEx.REST.result/0`,
+  `t:GhEx.GraphQL.result/0`). The `403` disambiguation (rate limit vs plain
   permission denial) reuses `GhEx.RateLimit.rate_limited?/3`, the same check
   `GhEx.RateLimit.retry/2` runs against a live response, so the two never
   disagree.

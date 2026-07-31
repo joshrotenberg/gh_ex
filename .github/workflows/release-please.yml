@@ -15,7 +15,12 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -31,27 +36,58 @@ jobs:
           manifest-file: .release-please-manifest.json
           skip-github-release: true
 
+      - name: Run CI for the release PR head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch=$(gh pr list --state open --label "autorelease: pending" --json headRefName --jq '.[0].headRefName // empty')
+          if [ -n "$branch" ]; then
+            gh workflow run ci.yml --ref "$branch"
+          else
+            echo "No open release PR; nothing to validate."
+          fi
+
   publish:
     name: Tag, release, and publish
     needs: release-please
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
       - name: Does mix.exs's version need releasing?
         id: v
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           version=$(grep -m1 '@version' mix.exs | sed -E 's/.*"([^"]+)".*/\1/')
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+
+          hex_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            "https://hex.pm/api/packages/gh_ex/releases/$version")
+          case "$hex_status" in
+            200) hex_needed=false ;;
+            404) hex_needed=true ;;
+            *) echo "Hex API returned HTTP $hex_status" >&2; exit 1 ;;
+          esac
+
+          if gh release view "v$version" >/dev/null 2>&1; then
+            github_needed=false
+          else
+            github_needed=true
+          fi
+
+          echo "hex_needed=$hex_needed" >> "$GITHUB_OUTPUT"
+          echo "github_needed=$github_needed" >> "$GITHUB_OUTPUT"
+
+          if [ "$hex_needed" = false ] && [ "$github_needed" = false ]; then
             echo "needed=false" >> "$GITHUB_OUTPUT"
-            echo "v$version is already released; nothing to do."
+            echo "v$version is already published to Hex and GitHub."
           else
             echo "needed=true" >> "$GITHUB_OUTPUT"
-            echo "v$version is not released yet; will tag and publish."
+            echo "needed: hex=$hex_needed github=$github_needed"
           fi
 
       - uses: erlef/setup-beam@v1
@@ -70,20 +106,38 @@ jobs:
           version="${{ steps.v.outputs.version }}"
 
           mix deps.get
+          mix hex.audit
           mix compile --warnings-as-errors
           mix test
 
-          git tag "v$version"
-          git push origin "v$version"
+          if [ "${{ steps.v.outputs.hex_needed }}" = true ]; then
+            mix hex.publish --yes
+          else
+            echo "gh_ex $version is already published to Hex."
+          fi
 
           notes=$(awk -v v="$version" 'BEGIN{f=0} $0 ~ "^## \\[" v "\\]" {f=1; print; next} /^## \[/ {if (f) exit} f {print}' CHANGELOG.md)
           [ -n "$notes" ] || notes="See CHANGELOG.md for v$version."
-          printf '%s\n' "$notes" | gh release create "v$version" --title "v$version" --notes-file -
 
-          mix hex.publish --yes
+          if [ "${{ steps.v.outputs.github_needed }}" = true ]; then
+            if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+              printf '%s\n' "$notes" | gh release create "v$version" --verify-tag \
+                --title "v$version" --notes-file -
+            else
+              printf '%s\n' "$notes" | gh release create "v$version" --target "$GITHUB_SHA" \
+                --title "v$version" --notes-file -
+            fi
+          else
+            echo "GitHub Release v$version already exists."
+          fi
 
-          # Keep Release Please's state consistent (it no longer tags releases itself).
+      - name: Mark the release PR as tagged
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           pr=$(gh pr list --state merged --label "autorelease: pending" --json number --jq '.[0].number // empty')
           if [ -n "$pr" ]; then
             gh pr edit "$pr" --remove-label "autorelease: pending" --add-label "autorelease: tagged"
+          else
+            echo "No merged pending release PR to relabel."
           fi

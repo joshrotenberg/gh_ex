@@ -163,6 +163,7 @@ commit statuses.
 ```elixir
 GhEx.Checks.create_run(client, "o", "r", %{name: "lint", head_sha: sha, status: "in_progress"})
 GhEx.Checks.list_for_ref(client, "o", "r", sha)
+{:ok, run_or_nil, _meta} = GhEx.Checks.find_run_for_ref(client, "o", "r", sha, "lint", app_id)
 GhEx.Checks.stream_annotations(client, "o", "r", check_run_id) |> Enum.take(100)
 GhEx.Checks.rerequest_run(client, "o", "r", check_run_id)
 

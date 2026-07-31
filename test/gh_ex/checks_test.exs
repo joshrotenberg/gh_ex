@@ -90,6 +90,70 @@ defmodule GhEx.ChecksTest do
     assert response in ["", nil]
   end
 
+  test "find_run_for_ref/7 returns the matching run and owns its filters" do
+    Req.Test.stub(__MODULE__.FindRun, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/commits/heads%2Ffeature/check-runs"
+
+      conn = Plug.Conn.fetch_query_params(conn)
+
+      assert conn.query_params == %{
+               "app_id" => "42",
+               "check_name" => "lint",
+               "filter" => "all"
+             }
+
+      Req.Test.json(conn, %{
+        "total_count" => 1,
+        "check_runs" => [%{"id" => 7, "name" => "lint"}]
+      })
+    end)
+
+    assert {:ok, %{"id" => 7, "name" => "lint"}, %{status: 200}} =
+             GhEx.Checks.find_run_for_ref(
+               client(__MODULE__.FindRun),
+               "o",
+               "r",
+               "heads/feature",
+               "lint",
+               42,
+               params: [filter: "all", check_name: "wrong", app_id: 99]
+             )
+  end
+
+  test "find_run_for_ref/6 returns nil when no run matches" do
+    Req.Test.stub(__MODULE__.FindNoRun, fn conn ->
+      assert conn.request_path == "/repos/o/r/commits/abc123/check-runs"
+      Req.Test.json(conn, %{"total_count" => 0, "check_runs" => []})
+    end)
+
+    assert {:ok, nil, %{status: 200}} =
+             GhEx.Checks.find_run_for_ref(
+               client(__MODULE__.FindNoRun),
+               "o",
+               "r",
+               "abc123",
+               "lint",
+               42
+             )
+  end
+
+  test "find_run_for_ref/6 preserves API errors" do
+    Req.Test.stub(__MODULE__.FindRunError, fn conn ->
+      conn |> Plug.Conn.put_status(403) |> Req.Test.json(%{"message" => "Forbidden"})
+    end)
+
+    assert {:error, %GhEx.Error{status: 403}} =
+             GhEx.Checks.find_run_for_ref(
+               client(__MODULE__.FindRunError),
+               "o",
+               "r",
+               "abc123",
+               "lint",
+               42
+             )
+  end
+
   test "list_for_ref/4 GETs check runs for a ref" do
     Req.Test.stub(__MODULE__.ListForRef, fn conn ->
       assert conn.request_path == "/repos/o/r/commits/main/check-runs"

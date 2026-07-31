@@ -264,10 +264,17 @@ GhEx.Gists.create(client, %{
 
 ## Webhooks
 
-`GhEx.Webhooks` is the receiving side: verify a delivery signature and parse the
-payload. See the [Testing](testing.md) guide for the full handler pattern.
+`GhEx.Hooks` manages repository webhook configurations. `GhEx.Webhooks` is the
+receiving side: verify a delivery signature and parse the payload. See the
+[Webhooks](webhooks.md) guide for the full receiver pattern.
 
 ```elixir
+GhEx.Hooks.create(client, "o", "r", %{
+  active: true,
+  events: ["push", "pull_request"],
+  config: %{url: "https://example.test/github", content_type: "json", secret: secret}
+})
+
 with :ok <- GhEx.Webhooks.verify(body, signature, secret),
      {:ok, payload} <- GhEx.Webhooks.parse(body) do
   handle(event_name, payload)

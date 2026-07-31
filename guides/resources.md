@@ -30,7 +30,8 @@ the path and, for an object-wrapped response, the `items:` key.
 ## Issues
 
 `GhEx.Issues` — list, get, create, update, create or edit comments, mutate
-assignees, and add, remove, or replace labels.
+assignees, manage the repository label vocabulary, and add, remove, or replace
+labels on issues.
 
 ```elixir
 GhEx.Issues.list(client, "elixir-lang", "elixir", params: [state: "open"])
@@ -39,6 +40,9 @@ GhEx.Issues.create_comment(client, "o", "r", 7, "thanks for the report")
 GhEx.Issues.update_comment(client, "o", "r", comment_id, "build is green")
 GhEx.Issues.add_assignees(client, "o", "r", 7, ["octocat"])
 GhEx.Issues.remove_assignees(client, "o", "r", 7, ["hubot"])
+GhEx.Issues.stream_labels(client, "o", "r") |> Enum.take(100)
+GhEx.Issues.create_label(client, "o", "r", %{name: "priority:high", color: "d93f0b"})
+GhEx.Issues.update_label(client, "o", "r", "priority:high", %{description: "Address next"})
 GhEx.Issues.add_labels(client, "o", "r", 7, ["bug", "p1"])
 GhEx.Issues.remove_label(client, "o", "r", 7, "needs triage")
 GhEx.Issues.replace_all_labels(client, "o", "r", 7, ["confirmed", "p1"])

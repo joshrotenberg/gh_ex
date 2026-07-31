@@ -139,6 +139,65 @@ defmodule GhEx.Issues do
     )
   end
 
+  @doc "Lists the labels defined for a repository."
+  @spec list_labels(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
+  def list_labels(client, owner, repo, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/labels", opts)
+  end
+
+  @doc "Auto-paginates the labels defined for a repository into a lazy `Stream`."
+  @spec stream_labels(Client.t(), String.t(), String.t(), keyword()) :: Enumerable.t()
+  def stream_labels(client, owner, repo, opts \\ []) do
+    REST.stream(client, "/repos/#{owner}/#{repo}/labels", opts)
+  end
+
+  @doc """
+  Gets a repository label by name.
+
+  The name is percent-encoded as one path segment, so spaces, slashes, and
+  other reserved characters are safe to pass directly.
+  """
+  @spec get_label(Client.t(), String.t(), String.t(), String.t(), keyword()) :: REST.result()
+  def get_label(client, owner, repo, name, opts \\ []) do
+    REST.get(client, "/repos/#{owner}/#{repo}/labels/#{encode_segment(name)}", opts)
+  end
+
+  @doc """
+  Creates a repository label. `attrs` requires `name` and `color` and may set
+  `description`.
+
+  Creating an existing name returns GitHub's `422` `already_exists` validation
+  error as a `GhEx.Error`. An additive reconciler can catch that error, update
+  the existing label, and re-fetch the repository labels between passes to
+  account for concurrent writers.
+  """
+  @spec create_label(Client.t(), String.t(), String.t(), map(), keyword()) :: REST.result()
+  def create_label(client, owner, repo, attrs, opts \\ []) do
+    REST.post(client, "/repos/#{owner}/#{repo}/labels", Keyword.put(opts, :json, attrs))
+  end
+
+  @doc """
+  Updates a repository label identified by its current name.
+
+  `attrs` may set `new_name`, `color`, and `description`. The current name is
+  percent-encoded as one path segment.
+  """
+  @spec update_label(
+          Client.t(),
+          String.t(),
+          String.t(),
+          String.t(),
+          map(),
+          keyword()
+        ) :: REST.result()
+  def update_label(client, owner, repo, name, attrs, opts \\ []) do
+    REST.patch(
+      client,
+      "/repos/#{owner}/#{repo}/labels/#{encode_segment(name)}",
+      Keyword.put(opts, :json, attrs)
+    )
+  end
+
   @doc "Adds labels to an issue. `labels` is a list of label names."
   @spec add_labels(Client.t(), String.t(), String.t(), number_ref(), [String.t()], keyword()) ::
           REST.result()

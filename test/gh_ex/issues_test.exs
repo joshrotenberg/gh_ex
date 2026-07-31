@@ -152,6 +152,106 @@ defmodule GhEx.IssuesTest do
              )
   end
 
+  test "list_labels/3 GETs repository labels" do
+    Req.Test.stub(__MODULE__.ListRepoLabels, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/labels"
+      assert conn.query_string == "per_page=50"
+      GhEx.Testing.json(conn, [%{"name" => "bug"}])
+    end)
+
+    assert {:ok, [%{"name" => "bug"}], _} =
+             GhEx.Issues.list_labels(client(__MODULE__.ListRepoLabels), "o", "r",
+               params: [per_page: 50]
+             )
+  end
+
+  test "stream_labels/3 auto-paginates repository labels" do
+    Req.Test.stub(__MODULE__.StreamRepoLabels, fn conn ->
+      assert conn.request_path == "/repos/o/r/labels"
+      GhEx.Testing.json(conn, [%{"name" => "bug"}, %{"name" => "enhancement"}])
+    end)
+
+    assert client(__MODULE__.StreamRepoLabels)
+           |> GhEx.Issues.stream_labels("o", "r")
+           |> Enum.to_list() == [%{"name" => "bug"}, %{"name" => "enhancement"}]
+  end
+
+  test "get_label/4 GETs one percent-encoded repository label" do
+    Req.Test.stub(__MODULE__.GetRepoLabel, fn conn ->
+      assert conn.request_path == "/repos/o/r/labels/needs%20triage%2Furgent"
+      GhEx.Testing.json(conn, %{"name" => "needs triage/urgent"})
+    end)
+
+    assert {:ok, %{"name" => "needs triage/urgent"}, _} =
+             GhEx.Issues.get_label(
+               client(__MODULE__.GetRepoLabel),
+               "o",
+               "r",
+               "needs triage/urgent"
+             )
+  end
+
+  test "create_label/4 POSTs the repository label body" do
+    Req.Test.stub(__MODULE__.CreateRepoLabel, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/labels"
+
+      assert body(conn) == %{
+               "name" => "priority:high",
+               "color" => "d93f0b",
+               "description" => "Address next"
+             }
+
+      conn
+      |> Plug.Conn.put_status(201)
+      |> GhEx.Testing.json(%{"name" => "priority:high", "color" => "d93f0b"})
+    end)
+
+    assert {:ok, %{"name" => "priority:high"}, %{status: 201}} =
+             GhEx.Issues.create_label(client(__MODULE__.CreateRepoLabel), "o", "r", %{
+               name: "priority:high",
+               color: "d93f0b",
+               description: "Address next"
+             })
+  end
+
+  test "create_label/4 preserves the existing-name validation details" do
+    Req.Test.stub(__MODULE__.ExistingRepoLabel, fn conn ->
+      conn
+      |> Plug.Conn.put_status(422)
+      |> GhEx.Testing.json(%{
+        "message" => "Validation Failed",
+        "errors" => [%{"resource" => "Label", "field" => "name", "code" => "already_exists"}]
+      })
+    end)
+
+    assert {:error, %GhEx.Error{status: 422, errors: [%{"code" => "already_exists"}]}} =
+             GhEx.Issues.create_label(client(__MODULE__.ExistingRepoLabel), "o", "r", %{
+               name: "bug",
+               color: "d73a4a"
+             })
+  end
+
+  test "update_label/5 PATCHes a percent-encoded current name" do
+    Req.Test.stub(__MODULE__.UpdateRepoLabel, fn conn ->
+      assert conn.method == "PATCH"
+      assert conn.request_path == "/repos/o/r/labels/priority%3Ahigh%2Fnext"
+      assert body(conn) == %{"new_name" => "priority:urgent", "color" => "b60205"}
+      GhEx.Testing.json(conn, %{"name" => "priority:urgent", "color" => "b60205"})
+    end)
+
+    assert {:ok, %{"name" => "priority:urgent"}, _} =
+             GhEx.Issues.update_label(
+               client(__MODULE__.UpdateRepoLabel),
+               "o",
+               "r",
+               "priority:high/next",
+               %{new_name: "priority:urgent", color: "b60205"},
+               json: %{new_name: "caller override"}
+             )
+  end
+
   test "add_labels/5 POSTs the label list" do
     Req.Test.stub(__MODULE__.Labels, fn conn ->
       assert conn.method == "POST"

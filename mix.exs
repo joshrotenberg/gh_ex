@@ -106,6 +106,7 @@ defmodule GhEx.MixProject do
           GhEx.Checks,
           GhEx.Statuses,
           GhEx.Gists,
+          GhEx.Hooks,
           GhEx.Webhooks,
           GhEx.Notifications
         ],

@@ -77,6 +77,64 @@ defmodule GhEx.RepositoriesTest do
     assert meta.status == 204
   end
 
+  test "is_collaborator/4 returns true for GitHub's 204 response" do
+    Req.Test.stub(__MODULE__.IsCollaborator, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/collaborators/octocat"
+      Plug.Conn.send_resp(conn, 204, "")
+    end)
+
+    assert {:ok, true, %{status: 204}} =
+             GhEx.Repositories.is_collaborator(
+               client(__MODULE__.IsCollaborator),
+               "o",
+               "r",
+               "octocat"
+             )
+  end
+
+  test "is_collaborator/4 returns false for GitHub's 404 response" do
+    Req.Test.stub(__MODULE__.IsNotCollaborator, fn conn ->
+      assert conn.request_path == "/repos/o/r/collaborators/octocat"
+      Plug.Conn.send_resp(conn, 404, "")
+    end)
+
+    assert {:ok, false, %{status: 404}} =
+             GhEx.Repositories.is_collaborator(
+               client(__MODULE__.IsNotCollaborator),
+               "o",
+               "r",
+               "octocat"
+             )
+  end
+
+  test "get_collaborator_permission/4 GETs the effective permission and role" do
+    Req.Test.stub(__MODULE__.CollaboratorPermission, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/collaborators/octo%2Fcat/permission"
+
+      Req.Test.json(conn, %{
+        "permission" => "write",
+        "role_name" => "maintain",
+        "user" => %{"login" => "octo/cat"}
+      })
+    end)
+
+    assert {:ok, permission, _meta} =
+             GhEx.Repositories.get_collaborator_permission(
+               client(__MODULE__.CollaboratorPermission),
+               "o",
+               "r",
+               "octo/cat"
+             )
+
+    assert permission == %{
+             "permission" => "write",
+             "role_name" => "maintain",
+             "user" => %{"login" => "octo/cat"}
+           }
+  end
+
   test "list_commits/3 GETs commits" do
     Req.Test.stub(__MODULE__.Commits, fn conn ->
       assert conn.request_path == "/repos/o/r/commits"

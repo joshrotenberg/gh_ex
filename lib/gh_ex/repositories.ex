@@ -58,6 +58,46 @@ defmodule GhEx.Repositories do
     REST.delete(client, "/repos/#{owner}/#{repo}", opts)
   end
 
+  @doc """
+  Checks whether `username` is a repository collaborator.
+
+  Returns `{:ok, true, meta}` for GitHub's `204` collaborator response and
+  `{:ok, false, meta}` for `404`. Other failures retain the usual
+  `{:error, reason}` shape.
+  """
+  @spec is_collaborator(Client.t(), String.t(), String.t(), String.t(), keyword()) ::
+          REST.result()
+  # GitHub's endpoint and issue #123 deliberately use the `is_collaborator` name.
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
+  def is_collaborator(client, owner, repo, username, opts \\ []) do
+    REST.present?(
+      client,
+      "/repos/#{owner}/#{repo}/collaborators/#{encode_segment(username)}",
+      opts
+    )
+  end
+
+  @doc """
+  Gets a user's effective repository permission and role.
+
+  The response includes the legacy base `"permission"`, the assigned
+  `"role_name"` (including custom roles), and a nested `"user"` object.
+  """
+  @spec get_collaborator_permission(
+          Client.t(),
+          String.t(),
+          String.t(),
+          String.t(),
+          keyword()
+        ) :: REST.result()
+  def get_collaborator_permission(client, owner, repo, username, opts \\ []) do
+    REST.get(
+      client,
+      "/repos/#{owner}/#{repo}/collaborators/#{encode_segment(username)}/permission",
+      opts
+    )
+  end
+
   @doc "Lists commits on a repository. Use `params:` for `sha`, `path`, `since`, `until`."
   @spec list_commits(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
   def list_commits(client, owner, repo, opts \\ []) do
@@ -106,4 +146,6 @@ defmodule GhEx.Repositories do
   def stream_events(client, owner, repo, opts \\ []) do
     REST.stream(client, "/repos/#{owner}/#{repo}/events", opts)
   end
+
+  defp encode_segment(value), do: URI.encode(value, &URI.char_unreserved?/1)
 end

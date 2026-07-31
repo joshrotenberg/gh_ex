@@ -12,7 +12,7 @@ defmodule GhEx.Activity do
   `GhEx.REST` and pass `opts` through to `Req`.
   """
 
-  alias GhEx.{Client, Error, Pagination, RateLimit, REST}
+  alias GhEx.{Client, REST}
 
   @doc "Lists events for a repository."
   @spec list_repo_events(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
@@ -107,9 +107,7 @@ defmodule GhEx.Activity do
   """
   @spec starred?(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
   def starred?(client, owner, repo, opts \\ []) do
-    client
-    |> REST.raw(:get, "/user/starred/#{owner}/#{repo}", opts)
-    |> normalize_starred()
+    REST.present?(client, "/user/starred/#{owner}/#{repo}", opts)
   end
 
   @doc "Stars a repository for the authenticated user."
@@ -122,35 +120,5 @@ defmodule GhEx.Activity do
   @spec unstar(Client.t(), String.t(), String.t(), keyword()) :: REST.result()
   def unstar(client, owner, repo, opts \\ []) do
     REST.delete(client, "/user/starred/#{owner}/#{repo}", opts)
-  end
-
-  defp normalize_starred({:ok, %Req.Response{status: 304} = resp}),
-    do: {:ok, :not_modified, response_meta(resp)}
-
-  defp normalize_starred({:ok, %Req.Response{status: 404} = resp}),
-    do: {:ok, false, response_meta(resp)}
-
-  defp normalize_starred({:ok, %Req.Response{status: status} = resp}) when status in 200..299,
-    do: {:ok, true, response_meta(resp)}
-
-  defp normalize_starred({:ok, %Req.Response{} = resp}), do: {:error, Error.from_response(resp)}
-  defp normalize_starred({:error, reason}), do: {:error, reason}
-
-  defp response_meta(resp) do
-    %REST.Meta{
-      status: resp.status,
-      headers: resp.headers,
-      links: Pagination.links(resp),
-      rate_limit: RateLimit.from_response(resp),
-      etag: header_first(resp, "etag"),
-      last_modified: header_first(resp, "last-modified")
-    }
-  end
-
-  defp header_first(resp, name) do
-    case Req.Response.get_header(resp, name) do
-      [value | _] -> value
-      [] -> nil
-    end
   end
 end

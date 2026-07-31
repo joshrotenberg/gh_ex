@@ -269,6 +269,36 @@ defmodule GhEx.RESTTest do
     end
   end
 
+  describe "present?/3" do
+    test "normalizes a 2xx response to true with metadata" do
+      Req.Test.stub(__MODULE__.Present, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("etag", ~s("present"))
+        |> Plug.Conn.send_resp(204, "")
+      end)
+
+      assert {:ok, true, meta} = GhEx.REST.present?(client(__MODULE__.Present), "/present")
+      assert meta.status == 204
+      assert meta.etag == ~s("present")
+    end
+
+    test "normalizes only 404 to false" do
+      Req.Test.stub(__MODULE__.Absent, fn conn ->
+        conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"message" => "Not Found"})
+      end)
+
+      Req.Test.stub(__MODULE__.ForbiddenPresence, fn conn ->
+        conn |> Plug.Conn.put_status(403) |> Req.Test.json(%{"message" => "Forbidden"})
+      end)
+
+      assert {:ok, false, %{status: 404}} =
+               GhEx.REST.present?(client(__MODULE__.Absent), "/absent")
+
+      assert {:error, %GhEx.Error{status: 403}} =
+               GhEx.REST.present?(client(__MODULE__.ForbiddenPresence), "/forbidden")
+    end
+  end
+
   describe "RateLimit.get/1" do
     test "GETs /rate_limit" do
       Req.Test.stub(__MODULE__.RLGet, fn conn ->

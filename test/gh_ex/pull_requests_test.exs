@@ -128,6 +128,29 @@ defmodule GhEx.PullRequestsTest do
              GhEx.PullRequests.merge(client(__MODULE__.MergeDefault), "o", "r", 7)
   end
 
+  test "is_merged/4 maps GitHub's 204 and 404 responses to booleans" do
+    Req.Test.stub(__MODULE__.IsMerged, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/repos/o/r/pulls/7/merge"
+
+      case conn.query_string do
+        "merged=true" ->
+          Plug.Conn.send_resp(conn, 204, "")
+
+        "merged=false" ->
+          conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"message" => "Not Found"})
+      end
+    end)
+
+    c = client(__MODULE__.IsMerged)
+
+    assert {:ok, true, %{status: 204}} =
+             GhEx.PullRequests.is_merged(c, "o", "r", 7, params: [merged: true])
+
+    assert {:ok, false, %{status: 404}} =
+             GhEx.PullRequests.is_merged(c, "o", "r", 7, params: [merged: false])
+  end
+
   test "merge_async/5 PUTs to the asynchronous merge endpoint" do
     Req.Test.stub(__MODULE__.MergeAsync, fn conn ->
       assert conn.method == "PUT"
@@ -212,6 +235,16 @@ defmodule GhEx.PullRequestsTest do
              GhEx.PullRequests.list_files(client(__MODULE__.Files), "o", "r", 7)
   end
 
+  test "list_commits/4 GETs the pull request commits" do
+    Req.Test.stub(__MODULE__.Commits, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/7/commits"
+      Req.Test.json(conn, [%{"sha" => "abc123"}])
+    end)
+
+    assert {:ok, [%{"sha" => "abc123"}], _} =
+             GhEx.PullRequests.list_commits(client(__MODULE__.Commits), "o", "r", 7)
+  end
+
   test "list_reviews/4 GETs the reviews" do
     Req.Test.stub(__MODULE__.Reviews, fn conn ->
       assert conn.request_path == "/repos/o/r/pulls/7/reviews"
@@ -280,6 +313,42 @@ defmodule GhEx.PullRequestsTest do
              )
   end
 
+  test "request_reviewers/5 POSTs user and team reviewers" do
+    Req.Test.stub(__MODULE__.RequestReviewers, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/pulls/7/requested_reviewers"
+      assert body(conn) == %{"reviewers" => ["octocat"], "team_reviewers" => ["core"]}
+      conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"number" => 7})
+    end)
+
+    assert {:ok, %{"number" => 7}, _} =
+             GhEx.PullRequests.request_reviewers(
+               client(__MODULE__.RequestReviewers),
+               "o",
+               "r",
+               7,
+               %{reviewers: ["octocat"], team_reviewers: ["core"]}
+             )
+  end
+
+  test "remove_requested_reviewers/5 DELETEs user and team reviewers" do
+    Req.Test.stub(__MODULE__.RemoveReviewers, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/repos/o/r/pulls/7/requested_reviewers"
+      assert body(conn) == %{"reviewers" => ["octocat"], "team_reviewers" => ["core"]}
+      Req.Test.json(conn, %{"number" => 7})
+    end)
+
+    assert {:ok, %{"number" => 7}, _} =
+             GhEx.PullRequests.remove_requested_reviewers(
+               client(__MODULE__.RemoveReviewers),
+               "o",
+               "r",
+               7,
+               %{reviewers: ["octocat"], team_reviewers: ["core"]}
+             )
+  end
+
   test "create_review/5 POSTs a review" do
     Req.Test.stub(__MODULE__.Review, fn conn ->
       assert conn.method == "POST"
@@ -313,6 +382,17 @@ defmodule GhEx.PullRequestsTest do
     assert client(__MODULE__.StreamFiles)
            |> GhEx.PullRequests.stream_files("o", "r", 42)
            |> Enum.to_list() == [%{"filename" => "a.ex"}]
+  end
+
+  test "stream_commits/4 auto-paginates pull request commits" do
+    Req.Test.stub(__MODULE__.StreamCommits, fn conn ->
+      assert conn.request_path == "/repos/o/r/pulls/42/commits"
+      Req.Test.json(conn, [%{"sha" => "abc123"}])
+    end)
+
+    assert client(__MODULE__.StreamCommits)
+           |> GhEx.PullRequests.stream_commits("o", "r", 42)
+           |> Enum.to_list() == [%{"sha" => "abc123"}]
   end
 
   test "stream_reviews/4 auto-paginates pull request reviews" do

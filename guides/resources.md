@@ -121,7 +121,8 @@ GhEx.Git.delete_ref(client, "o", "r", "refs/heads/release")
 
 ## Releases
 
-`GhEx.Releases` — list, get, get_latest, get_by_tag, create, update, delete.
+`GhEx.Releases` — list, get, create, update, delete, generate notes, and upload
+raw release assets to GitHub's dedicated upload endpoint.
 
 ```elixir
 GhEx.Releases.get_latest(client, "o", "r")
@@ -131,6 +132,15 @@ GhEx.Releases.create(client, "o", "r", %{
   name: "v1.0.0",
   generate_release_notes: true
 })
+
+asset = %{
+  name: "gh_ex.tar.gz",
+  content_type: "application/gzip",
+  data: File.read!("gh_ex.tar.gz"),
+  label: "Linux archive"
+}
+
+GhEx.Releases.upload_asset(client, "o", "r", release_id, asset)
 ```
 
 ## Actions

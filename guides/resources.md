@@ -29,13 +29,16 @@ the path and, for an object-wrapped response, the `items:` key.
 
 ## Issues
 
-`GhEx.Issues` — list, get, create, update, comment, label.
+`GhEx.Issues` — list, get, create, update, comment, and add, remove, or replace
+labels.
 
 ```elixir
 GhEx.Issues.list(client, "elixir-lang", "elixir", params: [state: "open"])
 GhEx.Issues.create(client, "o", "r", %{title: "Bug", body: "..."})
 GhEx.Issues.create_comment(client, "o", "r", 7, "thanks for the report")
 GhEx.Issues.add_labels(client, "o", "r", 7, ["bug", "p1"])
+GhEx.Issues.remove_label(client, "o", "r", 7, "needs triage")
+GhEx.Issues.replace_all_labels(client, "o", "r", 7, ["confirmed", "p1"])
 ```
 
 ## Pull requests

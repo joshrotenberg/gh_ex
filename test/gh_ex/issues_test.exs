@@ -2,7 +2,7 @@ defmodule GhEx.IssuesTest do
   use ExUnit.Case, async: true
 
   defp client(stub) do
-    GhEx.new(auth: {:token, "t"}, req_options: [plug: {Req.Test, stub}])
+    GhEx.Testing.client(stub)
   end
 
   defp body(conn) do
@@ -91,6 +91,65 @@ defmodule GhEx.IssuesTest do
 
     assert {:ok, %{"id" => 1}, _} =
              GhEx.Issues.create_comment(client(__MODULE__.Comment), "o", "r", 7, "thanks")
+  end
+
+  test "update_comment/5 PATCHes a rolling comment body" do
+    Req.Test.stub(__MODULE__.UpdateComment, fn conn ->
+      assert conn.method == "PATCH"
+      assert conn.request_path == "/repos/o/r/issues/comments/42"
+      assert body(conn) == %{"body" => "build is green"}
+      GhEx.Testing.json(conn, %{"id" => 42, "body" => "build is green"})
+    end)
+
+    assert {:ok, %{"id" => 42, "body" => "build is green"}, _} =
+             GhEx.Issues.update_comment(
+               client(__MODULE__.UpdateComment),
+               "o",
+               "r",
+               42,
+               "build is green",
+               json: %{body: "caller override"}
+             )
+  end
+
+  test "add_assignees/5 POSTs only the assignees to add" do
+    Req.Test.stub(__MODULE__.AddAssignees, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/repos/o/r/issues/7/assignees"
+      assert body(conn) == %{"assignees" => ["octocat", "hubot"]}
+
+      conn
+      |> Plug.Conn.put_status(201)
+      |> GhEx.Testing.json(%{"number" => 7, "assignees" => [%{"login" => "octocat"}]})
+    end)
+
+    assert {:ok, %{"number" => 7}, %{status: 201}} =
+             GhEx.Issues.add_assignees(
+               client(__MODULE__.AddAssignees),
+               "o",
+               "r",
+               7,
+               ["octocat", "hubot"]
+             )
+  end
+
+  test "remove_assignees/5 DELETEs only the assignees to remove" do
+    Req.Test.stub(__MODULE__.RemoveAssignees, fn conn ->
+      assert conn.method == "DELETE"
+      assert conn.request_path == "/repos/o/r/issues/7/assignees"
+      assert body(conn) == %{"assignees" => ["hubot"]}
+      GhEx.Testing.json(conn, %{"number" => 7, "assignees" => []})
+    end)
+
+    assert {:ok, %{"number" => 7, "assignees" => []}, _} =
+             GhEx.Issues.remove_assignees(
+               client(__MODULE__.RemoveAssignees),
+               "o",
+               "r",
+               7,
+               ["hubot"],
+               json: %{assignees: ["caller override"]}
+             )
   end
 
   test "add_labels/5 POSTs the label list" do

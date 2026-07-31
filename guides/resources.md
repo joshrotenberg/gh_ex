@@ -83,6 +83,18 @@ GhEx.Contents.create_or_update_file(client, "o", "r", "NOTES.md", %{
 
 `content` is Base64-encoded, and updating an existing file needs its blob `sha`.
 
+## Git references
+
+`GhEx.Git` — get, create, and delete branch or tag references. Read and delete
+helpers accept both `heads/name` and fully qualified `refs/heads/name` forms;
+create always sends GitHub the required fully qualified form.
+
+```elixir
+GhEx.Git.get_ref(client, "o", "r", "heads/main")
+GhEx.Git.create_ref(client, "o", "r", %{ref: "heads/release", sha: sha})
+GhEx.Git.delete_ref(client, "o", "r", "refs/heads/release")
+```
+
 ## Releases
 
 `GhEx.Releases` — list, get, get_latest, get_by_tag, create, update, delete.

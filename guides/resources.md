@@ -156,6 +156,30 @@ GhEx.Actions.review_pending_deployments(client, "o", "r", run_id, %{
 GhEx.Actions.rerun_failed_jobs(client, "o", "r", run_id)
 ```
 
+## Deployments
+
+`GhEx.Deployments` — deployment requests and their append-only status history.
+The deployment object identifies the ref and environment; automation waiting for
+completion should inspect the latest deployment status rather than polling the
+deployment object for a state change.
+
+```elixir
+{:ok, deployment, _meta} =
+  GhEx.Deployments.create(client, "o", "r", %{
+    ref: "main",
+    environment: "production",
+    required_contexts: []
+  })
+
+GhEx.Deployments.create_status(client, "o", "r", deployment["id"], %{
+  state: "in_progress",
+  log_url: "https://deploys.example.test/42"
+})
+
+{:ok, statuses, _meta} = GhEx.Deployments.list_statuses(client, "o", "r", deployment["id"])
+latest_status = List.first(statuses)
+```
+
 ## Activity
 
 `GhEx.Activity` — repository, organization, user, and public event feeds plus

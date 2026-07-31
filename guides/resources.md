@@ -83,6 +83,19 @@ GhEx.Contents.create_or_update_file(client, "o", "r", "NOTES.md", %{
 
 `content` is Base64-encoded, and updating an existing file needs its blob `sha`.
 
+## Commits
+
+`GhEx.Commits` — get a commit, compare refs, find associated pull requests, and
+list or create commit comments. Repository-wide listing remains in
+`GhEx.Repositories.list_commits/4` and `GhEx.Repositories.stream_commits/4`.
+
+```elixir
+GhEx.Commits.get(client, "o", "r", sha)
+GhEx.Commits.compare(client, "o", "r", "main", "feature/agent")
+GhEx.Commits.list_pulls(client, "o", "r", sha)
+GhEx.Commits.create_comment(client, "o", "r", sha, %{body: "Looks good"})
+```
+
 ## Git references
 
 `GhEx.Git` — get, create, and delete branch or tag references. Read and delete

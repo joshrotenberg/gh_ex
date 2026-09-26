@@ -1,0 +1,30 @@
+# Dependabot version updates for Mix dependencies.
+#
+# Grouping: patch updates arrive together in one weekly PR. Minor and major
+# updates arrive as one PR per dependency. Security updates are not grouped
+# and always arrive as one PR per advisory.
+#
+# Handling updates that may break:
+#
+# - A major bump (1.x to 2.x), or a minor bump of a 0.x dependency (0.5 to
+#   0.6), can change the API. Review the dependency's changelog before
+#   merging, and check whether the requirement in mix.exs needs to move.
+# - If the update needs code changes, push them to the Dependabot branch or
+#   close the PR and do the upgrade in a separate PR.
+# - If the upgrade is deferred, comment `@dependabot ignore this minor version`
+#   or `@dependabot ignore this major version` on the PR so it is not
+#   reopened each week.
+# - CI (lint, the full test matrix, and Dialyzer) runs on every Dependabot PR.
+#   Do not merge on red.
+version: 2
+updates:
+  - package-ecosystem: mix
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      mix-patch:
+        applies-to: version-updates
+        update-types:
+          - patch

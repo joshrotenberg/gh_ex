@@ -31,6 +31,7 @@ jobs:
             _build
           key: ${{ runner.os }}-lint-${{ hashFiles('**/mix.lock') }}
       - run: mix deps.get
+      - run: mix deps.unlock --check-unused
       - run: mix hex.audit
       - run: mix format --check-formatted
       - run: mix credo --strict
